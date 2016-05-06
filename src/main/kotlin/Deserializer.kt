@@ -91,6 +91,10 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
             throw UnsupportedOperationException()
         }
 
+        override fun visitArrayElement(value: Token.ValueToken) {
+            throw UnsupportedOperationException()
+        }
+
         override fun leaveArray() {
             throw UnsupportedOperationException()
         }

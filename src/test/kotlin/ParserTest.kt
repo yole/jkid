@@ -8,24 +8,32 @@ import kotlin.test.assertFailsWith
 
 class ParserTest {
     @Test fun testTrivial() {
-        verifyParse("{\"s\": \"x\"}", VisitProperty("s", Token.StringValue("x")))
+        verifyParse("""{"s": "x"}""", VisitProperty("s", Token.StringValue("x")))
     }
 
     @Test fun testTwoProperties() {
-        verifyParse("{\"s\": \"x\", \"f\": 1}",
+        verifyParse("""{"s": "x", "f": 1}""",
                 VisitProperty("s", Token.StringValue("x")),
                 VisitProperty("f", Token.NumberValue(1.0)))
     }
 
     @Test fun testMissingComma() {
-        verifyMalformed("{\"s\": \"x\" \"f\": 1}")
+        verifyMalformed("""{"s": "x" "f": 1}""")
     }
 
     @Test fun testNestedObject() {
-        verifyParse("{\"s\": {\"x\": 1}}",
+        verifyParse("""{"s": {"x": 1}}""",
                 EnterObject("s"),
                 VisitProperty("x", Token.NumberValue(1.0)),
                 LeaveObject)
+    }
+
+    @Test fun testArray() {
+        verifyParse("""{"s": [1, 2]}""",
+                EnterArray("s"),
+                VisitArrayElement(Token.NumberValue(1.0)),
+                VisitArrayElement(Token.NumberValue(2.0)),
+                LeaveArray)
     }
 
     private fun verifyParse(json: String, vararg expectedCallbackCalls: JsonParseCallbackCall) {
@@ -47,6 +55,7 @@ class ParserTest {
         data class EnterObject(val propertyName: String) : JsonParseCallbackCall
         data class EnterArray(val propertyName: String) : JsonParseCallbackCall
         data class VisitProperty(val propertyName: String, val value: Token.ValueToken) : JsonParseCallbackCall
+        data class VisitArrayElement(val value: Token.ValueToken) : JsonParseCallbackCall
         object LeaveObject : JsonParseCallbackCall
         object LeaveArray : JsonParseCallbackCall
     }
@@ -64,6 +73,10 @@ class ParserTest {
 
         override fun enterArray(propertyName: String) {
             calls.add(EnterArray(propertyName))
+        }
+
+        override fun visitArrayElement(value: Token.ValueToken) {
+            calls.add(VisitArrayElement(value))
         }
 
         override fun leaveArray() {

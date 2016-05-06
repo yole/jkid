@@ -6,6 +6,7 @@ interface JsonParseCallback {
     fun enterObject(propertyName: String)
     fun leaveObject()
     fun enterArray(propertyName: String)
+    fun visitArrayElement(value: Token.ValueToken)
     fun leaveArray()
     fun visitProperty(propertyName: String, value: Token.ValueToken)
 }
@@ -47,9 +48,33 @@ class Parser(val reader: Reader, val callback: JsonParseCallback) {
                     callback.leaveObject()
                 }
 
+                Token.LBRACKET -> {
+                    callback.enterArray(propName)
+                    parseArrayBody()
+                    callback.leaveArray()
+                }
+
                 else ->
-                    throw MalformedJSONException("Unxpected token $token")
+                    throw MalformedJSONException("Unexpected token $token")
             }
+            expectComma = true
+        }
+    }
+
+    private fun parseArrayBody() {
+        var expectComma = false
+        while (true) {
+            var token = nextToken()
+            if (token == Token.RBRACKET) return
+            if (expectComma) {
+                if (token != Token.COMMA) throw MalformedJSONException("Expected comma")
+                token = nextToken()
+            }
+
+            if (token !is Token.ValueToken) {
+                throw MalformedJSONException("Unexpected token $token")
+            }
+            callback.visitArrayElement(token)
             expectComma = true
         }
     }
@@ -62,5 +87,3 @@ class Parser(val reader: Reader, val callback: JsonParseCallback) {
 
     private fun nextToken(): Token = lexer.nextToken() ?: throw IllegalArgumentException("Premature end of dat")
 }
-
-
