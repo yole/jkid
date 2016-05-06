@@ -31,8 +31,20 @@ class ParserTest {
     @Test fun testArray() {
         verifyParse("""{"s": [1, 2]}""",
                 EnterArray("s"),
-                VisitArrayElement(Token.NumberValue(1.0)),
-                VisitArrayElement(Token.NumberValue(2.0)),
+                VisitProperty("s", Token.NumberValue(1.0)),
+                VisitProperty("s", Token.NumberValue(2.0)),
+                LeaveArray)
+    }
+
+    @Test fun testArrayOfObjects() {
+        verifyParse("""{"s": [{"x": 1}, {"x": 2}]}""",
+                EnterArray("s"),
+                EnterObject("s"),
+                VisitProperty("x", Token.NumberValue(1.0)),
+                LeaveObject,
+                EnterObject("s"),
+                VisitProperty("x", Token.NumberValue(2.0)),
+                LeaveObject,
                 LeaveArray)
     }
 
@@ -55,7 +67,6 @@ class ParserTest {
         data class EnterObject(val propertyName: String) : JsonParseCallbackCall
         data class EnterArray(val propertyName: String) : JsonParseCallbackCall
         data class VisitProperty(val propertyName: String, val value: Token.ValueToken) : JsonParseCallbackCall
-        data class VisitArrayElement(val value: Token.ValueToken) : JsonParseCallbackCall
         object LeaveObject : JsonParseCallbackCall
         object LeaveArray : JsonParseCallbackCall
     }
@@ -73,10 +84,6 @@ class ParserTest {
 
         override fun enterArray(propertyName: String) {
             calls.add(EnterArray(propertyName))
-        }
-
-        override fun visitArrayElement(value: Token.ValueToken) {
-            calls.add(VisitArrayElement(value))
         }
 
         override fun leaveArray() {

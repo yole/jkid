@@ -6,12 +6,11 @@ interface JsonParseCallback {
     fun enterObject(propertyName: String)
     fun leaveObject()
     fun enterArray(propertyName: String)
-    fun visitArrayElement(value: Token.ValueToken)
     fun leaveArray()
     fun visitProperty(propertyName: String, value: Token.ValueToken)
 }
 
-class Parser(val reader: Reader, val callback: JsonParseCallback) {
+class Parser(reader: Reader, val callback: JsonParseCallback) {
     private val lexer = Lexer(reader)
 
     fun parse() {
@@ -23,59 +22,58 @@ class Parser(val reader: Reader, val callback: JsonParseCallback) {
     }
 
     private fun parseObjectBody() {
-        var expectComma = false
-        while (true) {
-            var token = nextToken()
-            if (token == Token.RBRACE) return
-            if (expectComma) {
-                if (token != Token.COMMA) throw MalformedJSONException("Expected comma")
-                token = nextToken()
-            }
+        parseCommaSeparated(Token.RBRACE) { token ->
             if (token !is Token.StringValue) {
-                throw MalformedJSONException("Unxpected token $token")
+                throw MalformedJSONException("Unexpected token $token")
             }
 
             val propName = token.value
             expect(Token.COLON)
-            val valueStart = nextToken()
-            when (valueStart) {
-                is Token.ValueToken ->
-                    callback.visitProperty(propName, valueStart)
-
-                Token.LBRACE -> {
-                    callback.enterObject(propName)
-                    parseObjectBody()
-                    callback.leaveObject()
-                }
-
-                Token.LBRACKET -> {
-                    callback.enterArray(propName)
-                    parseArrayBody()
-                    callback.leaveArray()
-                }
-
-                else ->
-                    throw MalformedJSONException("Unexpected token $token")
-            }
-            expectComma = true
+            parsePropertyValue(propName, nextToken())
         }
     }
 
-    private fun parseArrayBody() {
+    private fun parseArrayBody(propName: String) {
+        parseCommaSeparated(Token.RBRACKET) { token ->
+            parsePropertyValue(propName, token)
+        }
+    }
+
+    private fun parseCommaSeparated(stopToken: Token, body: (Token) -> Unit) {
         var expectComma = false
         while (true) {
             var token = nextToken()
-            if (token == Token.RBRACKET) return
+            if (token == stopToken) return
             if (expectComma) {
                 if (token != Token.COMMA) throw MalformedJSONException("Expected comma")
                 token = nextToken()
             }
 
-            if (token !is Token.ValueToken) {
-                throw MalformedJSONException("Unexpected token $token")
-            }
-            callback.visitArrayElement(token)
+            body(token)
+
             expectComma = true
+        }
+    }
+
+    private fun parsePropertyValue(propName: String, token: Token) {
+        when (token) {
+            is Token.ValueToken ->
+                callback.visitProperty(propName, token)
+
+            Token.LBRACE -> {
+                callback.enterObject(propName)
+                parseObjectBody()
+                callback.leaveObject()
+            }
+
+            Token.LBRACKET -> {
+                callback.enterArray(propName)
+                parseArrayBody(propName)
+                callback.leaveArray()
+            }
+
+            else ->
+                throw MalformedJSONException("Unexpected token $token")
         }
     }
 

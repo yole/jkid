@@ -16,6 +16,18 @@ class DeserializerTest {
         assertEquals("x", result.o.s)
     }
 
+    @Test fun testArray() {
+        val result = deserialize<SingleListProp>(StringReader("""{"o": ["a", "b"]}"""))
+        assertEquals(2, result.o.size)
+        assertEquals("b", result.o[1])
+    }
+
+    @Test fun testObjectArray() {
+        val result = deserialize<SingleObjectListProp>(StringReader("""{"o": [{"s": "a"}, {"s": "b"}]}"""))
+        assertEquals(2, result.o.size)
+        assertEquals("b", result.o[1].s)
+    }
+
     @Test fun testPropertyTypeMismatch() {
         assertFailsWith<SchemaMismatchException> {
             deserialize<SingleStringProp>(StringReader("{\"s\": 1}"))
@@ -37,4 +49,8 @@ class DeserializerTest {
     data class SingleStringProp(val s: String)
 
     data class SingleObjectProp(val o: SingleStringProp)
+
+    data class SingleListProp(val o: List<String>)
+
+    data class SingleObjectListProp(val o: List<SingleStringProp>)
 }
