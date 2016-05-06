@@ -11,6 +11,11 @@ class DeserializerTest {
         assertEquals("x", result.s)
     }
 
+    @Test fun testObject() {
+        val result = deserialize<SingleObjectProp>(StringReader("{\"o\": {\"s\": \"x\"}}"))
+        assertEquals("x", result.o.s)
+    }
+
     @Test fun testPropertyTypeMismatch() {
         assertFailsWith<SchemaMismatchException> {
             deserialize<SingleStringProp>(StringReader("{\"s\": 1}"))
@@ -30,4 +35,6 @@ class DeserializerTest {
     }
 
     data class SingleStringProp(val s: String)
+
+    data class SingleObjectProp(val o: SingleStringProp)
 }

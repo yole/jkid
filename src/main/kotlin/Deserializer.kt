@@ -2,24 +2,46 @@ package ru.yole.jkid
 
 import java.io.Reader
 import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.primaryConstructor
 
 class SchemaMismatchException(message: String) : Exception(message)
 
-class ObjectSeed<T: Any>(val constructor: KFunction<T>) {
+interface IObjectSeed {
+    fun setProperty(name: String, value: Any?)
+    fun seedForPropertyValue(propertyName: String): IObjectSeed
+    fun plantIntoParent(): IObjectSeed
+}
+
+open class ObjectSeed<out T: Any>(targetClass: KClass<T>,
+                                  val parent: ObjectSeed<Any>? = null,
+                                  val parentIndex: Int = -1) : IObjectSeed {
+    private val constructor = targetClass.primaryConstructor
+            ?: throw UnsupportedOperationException("Only classes with primary constructor can be deserialized")
     private val parameters = constructor.parameters
     private val arguments = arrayOfNulls<Any?>(parameters.size)
 
-    fun setProperty(name: String, value: Any?) {
-        for ((i, param) in parameters.withIndex()) {
-            if (param.name == name) {
-                arguments[i] = coerceType(value, param)
-                break
-            }
-        }
+    override fun setProperty(name: String, value: Any?) {
+        val (i, param) = findParameter(name) ?: return
+        arguments[i] = coerceType(value, param)
+    }
+
+    override fun seedForPropertyValue(propertyName: String): IObjectSeed {
+        val (i, param) = findParameter(propertyName) ?: return DeadSeed(this)
+        val paramClass = (param.type.javaType as? Class<Any>)?.kotlin
+                ?: throw UnsupportedOperationException("Unsupported parameter type ${param.type.javaType}")
+        return ObjectSeed(paramClass, this, i)
+    }
+
+    override fun plantIntoParent(): IObjectSeed {
+        parent!!.arguments[parentIndex] = spawn()
+        return parent
+    }
+
+    private fun findParameter(name: String): Pair<Int, KParameter>? {
+        val index = parameters.indexOfFirst { it.name == name }
+        return if (index == -1) null else index to parameters[index]
     }
 
     private fun coerceType(value: Any?, param: KParameter): Any? {
@@ -46,18 +68,23 @@ class ObjectSeed<T: Any>(val constructor: KFunction<T>) {
     }
 }
 
-fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
-    val primaryConstructor = targetClass.primaryConstructor
-        ?: throw UnsupportedOperationException("Only classes with primary constructor can be deserialized")
+class DeadSeed(val parent: IObjectSeed) : IObjectSeed {
+    override fun setProperty(name: String, value: Any?) { }
+    override fun seedForPropertyValue(propertyName: String): IObjectSeed = this
+    override fun plantIntoParent(): IObjectSeed = parent
+}
 
-    val seed = ObjectSeed(primaryConstructor)
+fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
+
+    val seed = ObjectSeed(targetClass)
+    var currentSeed: IObjectSeed = seed
     val callback = object : JsonParseCallback {
         override fun enterObject(propertyName: String) {
-            throw UnsupportedOperationException()
+            currentSeed = currentSeed.seedForPropertyValue(propertyName)
         }
 
         override fun leaveObject() {
-            throw UnsupportedOperationException()
+            currentSeed = currentSeed.plantIntoParent()
         }
 
         override fun enterArray(propertyName: String) {
@@ -69,7 +96,7 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
         }
 
         override fun visitProperty(propertyName: String, value: Token.ValueToken) {
-            seed.setProperty(propertyName, value.value)
+            currentSeed.setProperty(propertyName, value.value)
         }
     }
     val parser = Parser(json, callback)
