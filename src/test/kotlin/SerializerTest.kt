@@ -1,0 +1,41 @@
+package ru.yole.jkid
+
+import org.junit.Test
+import kotlin.test.assertEquals
+
+class SerializerTest {
+    @Test fun testSimple() {
+        val result = serialize(SingleStringProp("x"))
+        assertEquals("""{"s": "x"}""", result)
+    }
+
+    @Test fun testTwoInts() {
+        val result = serialize(TwoIntProp(1, 2))
+        assertEquals("""{"i1": 1, "i2": 2}""", result)
+    }
+
+    @Test fun testTwoBools() {
+        val result = serialize(TwoBoolProp(true, false))
+        assertEquals("""{"b1": true, "b2": false}""", result)
+    }
+
+    @Test fun testObject() {
+        val result = serialize(SingleObjectProp(SingleStringProp("x")))
+        assertEquals("""{"o": {"s": "x"}}""", result)
+    }
+
+    @Test fun testArray() {
+        val result = serialize(SingleListProp(listOf("a", "b")))
+        assertEquals("""{"o": ["a", "b"]}""", result)
+    }
+
+    @Test fun testJsonName() {
+        val result = serialize(SingleAnnotatedStringProp("x"))
+        assertEquals("""{"q": "x"}""", result)
+    }
+
+    @Test fun testCustomSerializer() {
+        val result = serialize(SingleCustomSerializedProp(1))
+        assertEquals("""{"x": "ONE"}""", result)
+    }
+}

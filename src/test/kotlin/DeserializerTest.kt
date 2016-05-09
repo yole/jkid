@@ -12,7 +12,7 @@ class DeserializerTest {
     }
 
     @Test fun testObject() {
-        val result = deserialize<SingleObjectProp>(StringReader("{\"o\": {\"s\": \"x\"}}"))
+        val result = deserialize<SingleObjectProp>(StringReader("""{"o": {"s": "x"}}"""))
         assertEquals("x", result.o.s)
     }
 
@@ -60,32 +60,36 @@ class DeserializerTest {
             deserialize<SingleStringProp>(StringReader("{}"))
         }
     }
+}
 
-    data class SingleStringProp(val s: String)
+data class SingleStringProp(val s: String)
 
-    data class SingleObjectProp(val o: SingleStringProp)
+data class TwoIntProp(val i1: Int, val i2: Long)
 
-    data class SingleListProp(val o: List<String>)
+data class TwoBoolProp(val b1: Boolean, val b2: Boolean)
 
-    data class SingleObjectListProp(val o: List<SingleStringProp>)
+data class SingleObjectProp(val o: SingleStringProp)
 
-    data class SingleOptionalProp(val s: String = "foo")
+data class SingleListProp(val o: List<String>)
 
-    data class SingleAnnotatedStringProp(@JsonName("q") val s: String)
+data class SingleObjectListProp(val o: List<SingleStringProp>)
 
-    class NumberSerializer: ValueSerializer<Int> {
-        override fun deserializeValue(jsonValue: Any?): Int = when(jsonValue) {
-            "ZERO" -> 0
-            "ONE" -> 1
-            else -> throw SchemaMismatchException("Unexpected value $jsonValue")
-        }
+data class SingleOptionalProp(val s: String = "foo")
 
-        override fun serializeValue(value: Int): Any? = when(value) {
-            0 -> "ZERO"
-            1 -> "ONE"
-            else -> "?"
-        }
+data class SingleAnnotatedStringProp(@JsonName("q") val s: String)
+
+class NumberSerializer: ValueSerializer<Int> {
+    override fun deserializeValue(jsonValue: Any?): Int = when(jsonValue) {
+        "ZERO" -> 0
+        "ONE" -> 1
+        else -> throw SchemaMismatchException("Unexpected value $jsonValue")
     }
 
-    data class SingleCustomSerializedProp(@JsonSerializer(NumberSerializer::class) val x: Int)
+    override fun serializeValue(value: Int): Any? = when(value) {
+        0 -> "ZERO"
+        1 -> "ONE"
+        else -> "?"
+    }
 }
+
+data class SingleCustomSerializedProp(@JsonSerializer(NumberSerializer::class) val x: Int)

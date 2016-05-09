@@ -17,10 +17,8 @@ fun Type.asJavaClass(): Class<Any> = when(this) {
     else -> throw UnsupportedOperationException("Unsupported parameter type $this")
 }
 
-val KParameter.jsonName: String?
-    get() = annotations.filterIsInstance<JsonName>().firstOrNull()?.value ?: name
-
-abstract class Seed(val parent: Seed? = null,
+abstract class Seed(val reflectionCache: ReflectionCache,
+                    val parent: Seed? = null,
                     val parentParameter: KParameter? = null)  {
 
     abstract fun setProperty(name: String, value: Any?)
@@ -35,31 +33,30 @@ abstract class Seed(val parent: Seed? = null,
     abstract fun spawn(): Any?
 }
 
-class ObjectSeed<out T: Any>(targetClass: KClass<T>,
+class ObjectSeed<out T: Any>(private val targetClass: KClass<T>,
+                             reflectionCache: ReflectionCache,
                              parent: Seed? = null,
-                             parentParameter: KParameter? = null) : Seed(parent, parentParameter){
+                             parentParameter: KParameter? = null) : Seed(reflectionCache, parent, parentParameter) {
     private val constructor = targetClass.primaryConstructor
             ?: throw UnsupportedOperationException("Only classes with primary constructor can be deserialized")
     private val parameters = constructor.parameters
     private val arguments = mutableMapOf<KParameter, Any?>()
 
     override fun setProperty(name: String, value: Any?) {
-        val param = findParameter(name) ?: return
+        val param = reflectionCache[targetClass].findParameter(name) ?: return
         arguments[param] = coerceType(value, param)
     }
 
     override fun seedForPropertyValue(propertyName: String): Seed {
-        val param = findParameter(propertyName) ?: return DeadSeed(this)
+        val param = reflectionCache[targetClass].findParameter(propertyName) ?: return DeadSeed(this)
 
         return seedForType(this, param, param.type.javaType)
     }
 
-    private fun findParameter(name: String): KParameter? = parameters.find { it.jsonName == name }
-
     private fun coerceType(value: Any?, param: KParameter): Any? {
-        val deserializer = valueDeserializerFor(param)
-        if (deserializer != null) {
-            return deserializer.deserializeValue(value)
+        val serializer = reflectionCache[targetClass].valueSerializerFor(param)
+        if (serializer != null) {
+            return serializer.deserializeValue(value)
         }
 
         if (value == null && !param.type.isMarkedNullable) {
@@ -73,16 +70,6 @@ class ObjectSeed<out T: Any>(targetClass: KClass<T>,
         }
         return value
 
-    }
-
-    private fun valueDeserializerFor(param: KParameter): ValueSerializer<*>? {
-        val deserializerAnnotation = param.annotations.filterIsInstance<JsonSerializer>().firstOrNull()
-        if (deserializerAnnotation != null) {
-            val primaryConstructor = deserializerAnnotation.serializerClass.primaryConstructor
-                ?: throw IllegalArgumentException("Class specified as serializerClass needs to have a primary constructor")
-            return primaryConstructor.call()
-        }
-        return null
     }
 
     override fun spawn(): T {
@@ -106,17 +93,18 @@ class ObjectSeed<out T: Any>(targetClass: KClass<T>,
                 val parameterizedType = paramType as? ParameterizedType ?:
                         throw UnsupportedOperationException("Unsupported parameter type $this")
 
-                return CollectionSeed(parameterizedType.actualTypeArguments.single(), parent, param)
+                return CollectionSeed(parameterizedType.actualTypeArguments.single(), parent.reflectionCache, parent, param)
             }
-            return ObjectSeed(paramClass.kotlin, parent, param)
+            return ObjectSeed(paramClass.kotlin, parent.reflectionCache, parent, param)
         }
 
     }
 }
 
 class CollectionSeed(val elementType: Type,
+                     reflectionCache: ReflectionCache,
                      parent: Seed,
-                     parentParameter: KParameter?) : Seed(parent, parentParameter) {
+                     parentParameter: KParameter?) : Seed(reflectionCache, parent, parentParameter) {
 
     private val elements = mutableListOf<Any?>()
 
@@ -135,7 +123,7 @@ class CollectionSeed(val elementType: Type,
     }
 }
 
-class DeadSeed(parent: Seed) : Seed(parent, null) {
+class DeadSeed(parent: Seed) : Seed(parent.reflectionCache, parent, null) {
     override fun setProperty(name: String, value: Any?) { }
     override fun seedForPropertyValue(propertyName: String): Seed = this
     override fun plantIntoParent(): Seed = parent!!
@@ -146,8 +134,7 @@ class DeadSeed(parent: Seed) : Seed(parent, null) {
 }
 
 fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
-
-    val seed = ObjectSeed(targetClass)
+    val seed = ObjectSeed(targetClass, ReflectionCache())
     var currentSeed: Seed = seed
     val callback = object : JsonParseCallback {
         override fun enterObject(propertyName: String) {
