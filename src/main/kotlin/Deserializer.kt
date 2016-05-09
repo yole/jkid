@@ -24,14 +24,14 @@ interface IObjectSeed {
 }
 
 interface IParentSeed : IObjectSeed {
-    fun plant(index: Int, value: Any?)
+    fun plant(param: KParameter, value: Any?)
 }
 
 abstract class SeedWithParent(val parent: IParentSeed? = null,
-                              val parentIndex: Int = -1) : IObjectSeed {
+                              val parentParameter: KParameter? = null) : IObjectSeed {
 
     override fun plantIntoParent(): IObjectSeed {
-        parent!!.plant(parentIndex, spawn())
+        parent!!.plant(parentParameter!!, spawn())
         return parent
     }
 
@@ -40,28 +40,24 @@ abstract class SeedWithParent(val parent: IParentSeed? = null,
 
 class ObjectSeed<out T: Any>(targetClass: KClass<T>,
                              parent: IParentSeed? = null,
-                             parentIndex: Int = -1) : SeedWithParent(parent, parentIndex), IParentSeed {
+                             parentParameter: KParameter? = null) : SeedWithParent(parent, parentParameter), IParentSeed {
     private val constructor = targetClass.primaryConstructor
             ?: throw UnsupportedOperationException("Only classes with primary constructor can be deserialized")
     private val parameters = constructor.parameters
-    private val arguments = arrayOfNulls<Any?>(parameters.size)
+    private val arguments = mutableMapOf<KParameter, Any?>()
 
     override fun setProperty(name: String, value: Any?) {
-        val (i, param) = findParameter(name) ?: return
-        arguments[i] = coerceType(value, param)
+        val param = findParameter(name) ?: return
+        arguments[param] = coerceType(value, param)
     }
 
     override fun seedForPropertyValue(propertyName: String): IObjectSeed {
-        val (i, param) = findParameter(propertyName) ?: return DeadSeed(this)
+        val param = findParameter(propertyName) ?: return DeadSeed(this)
 
-        val paramType = param.type.javaType
-        return seedForType(this, i, paramType)
+        return seedForType(this, param, param.type.javaType)
     }
 
-    private fun findParameter(name: String): Pair<Int, KParameter>? {
-        val index = parameters.indexOfFirst { it.name == name }
-        return if (index == -1) null else index to parameters[index]
-    }
+    private fun findParameter(name: String): KParameter? = parameters.find { it.name == name }
 
     private fun coerceType(value: Any?, param: KParameter): Any? {
         if (value == null && !param.type.isMarkedNullable) {
@@ -78,29 +74,29 @@ class ObjectSeed<out T: Any>(targetClass: KClass<T>,
     }
 
     override fun spawn(): T {
-        for ((param, arg) in parameters zip arguments) {
-            if (arg == null && !param.isOptional && !param.type.isMarkedNullable) {
+        for (param in parameters) {
+            if (arguments[param] == null && !param.isOptional && !param.type.isMarkedNullable) {
                 throw SchemaMismatchException("Missing value for parameter ${param.name}")
             }
         }
-        return constructor.call(*arguments)
+        return constructor.callBy(arguments)
     }
 
-    override fun plant(index: Int, value: Any?) {
-        arguments[index] = value
+    override fun plant(param: KParameter, value: Any?) {
+        arguments[param] = value
     }
 
     companion object {
-        internal fun seedForType(parent: IParentSeed, paramIndex: Int, paramType: Type): SeedWithParent {
+        internal fun seedForType(parent: IParentSeed, param: KParameter?, paramType: Type): SeedWithParent {
             val paramClass = paramType.asJavaClass()
 
             if (Collection::class.java.isAssignableFrom(paramClass)) {
                 val parameterizedType = paramType as? ParameterizedType ?:
                         throw UnsupportedOperationException("Unsupported parameter type $this")
 
-                return CollectionSeed(parameterizedType.actualTypeArguments.single(), parent, paramIndex)
+                return CollectionSeed(parameterizedType.actualTypeArguments.single(), parent, param)
             }
-            return ObjectSeed(paramClass.kotlin, parent, paramIndex)
+            return ObjectSeed(paramClass.kotlin, parent, param)
         }
 
     }
@@ -108,7 +104,7 @@ class ObjectSeed<out T: Any>(targetClass: KClass<T>,
 
 class CollectionSeed(val elementType: Type,
                      parent: IParentSeed,
-                     parentIndex: Int) : SeedWithParent(parent, parentIndex), IParentSeed {
+                     parentParameter: KParameter?) : SeedWithParent(parent, parentParameter), IParentSeed {
 
     private val elements = mutableListOf<Any?>()
 
@@ -117,12 +113,12 @@ class CollectionSeed(val elementType: Type,
     }
 
     override fun seedForPropertyValue(propertyName: String): IObjectSeed {
-        return ObjectSeed.seedForType(this, parentIndex, elementType)
+        return ObjectSeed.seedForType(this, parentParameter, elementType)
     }
 
     override fun spawn() = elements
 
-    override fun plant(index: Int, value: Any?) {
+    override fun plant(param: KParameter, value: Any?) {
         elements.add(value)
     }
 }

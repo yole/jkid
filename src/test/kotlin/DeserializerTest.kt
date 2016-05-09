@@ -28,6 +28,11 @@ class DeserializerTest {
         assertEquals("b", result.o[1].s)
     }
 
+    @Test fun testOptionalArg() {
+        val result = deserialize<SingleOptionalProp>(StringReader("{}"))
+        assertEquals("foo", result.s)
+    }
+
     @Test fun testPropertyTypeMismatch() {
         assertFailsWith<SchemaMismatchException> {
             deserialize<SingleStringProp>(StringReader("{\"s\": 1}"))
@@ -53,4 +58,6 @@ class DeserializerTest {
     data class SingleListProp(val o: List<String>)
 
     data class SingleObjectListProp(val o: List<SingleStringProp>)
+
+    data class SingleOptionalProp(val s: String = "foo")
 }
