@@ -38,6 +38,11 @@ class DeserializerTest {
         assertEquals("x", result.s)
     }
 
+    @Test fun testCustomDeserializer() {
+        val result = deserialize<SingleCustomSerializedProp>(StringReader("""{"x": "ONE"}"""))
+        assertEquals(1, result.x)
+    }
+
     @Test fun testPropertyTypeMismatch() {
         assertFailsWith<SchemaMismatchException> {
             deserialize<SingleStringProp>(StringReader("{\"s\": 1}"))
@@ -67,4 +72,20 @@ class DeserializerTest {
     data class SingleOptionalProp(val s: String = "foo")
 
     data class SingleAnnotatedStringProp(@JsonName("q") val s: String)
+
+    class NumberSerializer: ValueSerializer<Int> {
+        override fun deserializeValue(jsonValue: Any?): Int = when(jsonValue) {
+            "ZERO" -> 0
+            "ONE" -> 1
+            else -> throw SchemaMismatchException("Unexpected value $jsonValue")
+        }
+
+        override fun serializeValue(value: Int): Any? = when(value) {
+            0 -> "ZERO"
+            1 -> "ONE"
+            else -> "?"
+        }
+    }
+
+    data class SingleCustomSerializedProp(@JsonSerializer(NumberSerializer::class) val x: Int)
 }

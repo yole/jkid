@@ -57,6 +57,11 @@ class ObjectSeed<out T: Any>(targetClass: KClass<T>,
     private fun findParameter(name: String): KParameter? = parameters.find { it.jsonName == name }
 
     private fun coerceType(value: Any?, param: KParameter): Any? {
+        val deserializer = valueDeserializerFor(param)
+        if (deserializer != null) {
+            return deserializer.deserializeValue(value)
+        }
+
         if (value == null && !param.type.isMarkedNullable) {
             throw SchemaMismatchException("Received null value for non-null parameter ${param.name}")
         }
@@ -68,6 +73,16 @@ class ObjectSeed<out T: Any>(targetClass: KClass<T>,
         }
         return value
 
+    }
+
+    private fun valueDeserializerFor(param: KParameter): ValueSerializer<*>? {
+        val deserializerAnnotation = param.annotations.filterIsInstance<JsonSerializer>().firstOrNull()
+        if (deserializerAnnotation != null) {
+            val primaryConstructor = deserializerAnnotation.serializerClass.primaryConstructor
+                ?: throw IllegalArgumentException("Class specified as serializerClass needs to have a primary constructor")
+            return primaryConstructor.call()
+        }
+        return null
     }
 
     override fun spawn(): T {
