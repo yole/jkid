@@ -4,6 +4,7 @@ import org.junit.Test
 import java.io.StringReader
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 class DeserializerTest {
     @Test fun testSimple() {
@@ -21,6 +22,11 @@ class DeserializerTest {
         val result = deserialize<TwoBoolProp>(StringReader("""{"b1": true, "b2": false}"""))
         assertEquals(true, result.b1)
         assertEquals(false, result.b2)
+    }
+
+    @Test fun testNullableString() {
+        val result = deserialize<SingleNullableStringProp>(StringReader("""{"s": null}"""))
+        assertNull(result.s)
     }
 
     @Test fun testObject() {
@@ -75,6 +81,8 @@ class DeserializerTest {
 }
 
 data class SingleStringProp(val s: String)
+
+data class SingleNullableStringProp(val s: String?)
 
 data class TwoIntProp(val i1: Int, val i2: Long)
 
