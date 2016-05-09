@@ -17,20 +17,14 @@ fun Type.asJavaClass(): Class<Any> = when(this) {
     else -> throw UnsupportedOperationException("Unsupported parameter type $this")
 }
 
-interface IObjectSeed {
-    fun setProperty(name: String, value: Any?)
-    fun seedForPropertyValue(propertyName: String): IObjectSeed
-    fun plantIntoParent(): IObjectSeed
-}
+abstract class Seed(val parent: Seed? = null,
+                    val parentParameter: KParameter? = null)  {
 
-interface IParentSeed : IObjectSeed {
-    fun plant(param: KParameter, value: Any?)
-}
+    abstract fun setProperty(name: String, value: Any?)
+    abstract fun seedForPropertyValue(propertyName: String): Seed
+    protected abstract fun plant(param: KParameter, value: Any?)
 
-abstract class SeedWithParent(val parent: IParentSeed? = null,
-                              val parentParameter: KParameter? = null) : IObjectSeed {
-
-    override fun plantIntoParent(): IObjectSeed {
+    open fun plantIntoParent(): Seed {
         parent!!.plant(parentParameter!!, spawn())
         return parent
     }
@@ -39,8 +33,8 @@ abstract class SeedWithParent(val parent: IParentSeed? = null,
 }
 
 class ObjectSeed<out T: Any>(targetClass: KClass<T>,
-                             parent: IParentSeed? = null,
-                             parentParameter: KParameter? = null) : SeedWithParent(parent, parentParameter), IParentSeed {
+                             parent: Seed? = null,
+                             parentParameter: KParameter? = null) : Seed(parent, parentParameter){
     private val constructor = targetClass.primaryConstructor
             ?: throw UnsupportedOperationException("Only classes with primary constructor can be deserialized")
     private val parameters = constructor.parameters
@@ -51,7 +45,7 @@ class ObjectSeed<out T: Any>(targetClass: KClass<T>,
         arguments[param] = coerceType(value, param)
     }
 
-    override fun seedForPropertyValue(propertyName: String): IObjectSeed {
+    override fun seedForPropertyValue(propertyName: String): Seed {
         val param = findParameter(propertyName) ?: return DeadSeed(this)
 
         return seedForType(this, param, param.type.javaType)
@@ -87,7 +81,7 @@ class ObjectSeed<out T: Any>(targetClass: KClass<T>,
     }
 
     companion object {
-        internal fun seedForType(parent: IParentSeed, param: KParameter?, paramType: Type): SeedWithParent {
+        internal fun seedForType(parent: Seed, param: KParameter?, paramType: Type): Seed {
             val paramClass = paramType.asJavaClass()
 
             if (Collection::class.java.isAssignableFrom(paramClass)) {
@@ -103,8 +97,8 @@ class ObjectSeed<out T: Any>(targetClass: KClass<T>,
 }
 
 class CollectionSeed(val elementType: Type,
-                     parent: IParentSeed,
-                     parentParameter: KParameter?) : SeedWithParent(parent, parentParameter), IParentSeed {
+                     parent: Seed,
+                     parentParameter: KParameter?) : Seed(parent, parentParameter) {
 
     private val elements = mutableListOf<Any?>()
 
@@ -112,7 +106,7 @@ class CollectionSeed(val elementType: Type,
         elements.add(value)
     }
 
-    override fun seedForPropertyValue(propertyName: String): IObjectSeed {
+    override fun seedForPropertyValue(propertyName: String): Seed {
         return ObjectSeed.seedForType(this, parentParameter, elementType)
     }
 
@@ -123,16 +117,20 @@ class CollectionSeed(val elementType: Type,
     }
 }
 
-class DeadSeed(val parent: IObjectSeed) : IObjectSeed {
+class DeadSeed(parent: Seed) : Seed(parent, null) {
     override fun setProperty(name: String, value: Any?) { }
-    override fun seedForPropertyValue(propertyName: String): IObjectSeed = this
-    override fun plantIntoParent(): IObjectSeed = parent
+    override fun seedForPropertyValue(propertyName: String): Seed = this
+    override fun plantIntoParent(): Seed = parent!!
+
+    override fun plant(param: KParameter, value: Any?) = throw UnsupportedOperationException()
+
+    override fun spawn(): Any? = throw UnsupportedOperationException()
 }
 
 fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
 
     val seed = ObjectSeed(targetClass)
-    var currentSeed: IObjectSeed = seed
+    var currentSeed: Seed = seed
     val callback = object : JsonParseCallback {
         override fun enterObject(propertyName: String) {
             currentSeed = currentSeed.seedForPropertyValue(propertyName)
