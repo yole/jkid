@@ -44,7 +44,7 @@ class ObjectSeed<out T: Any>(private val targetClass: KClass<T>,
 
     override fun setProperty(name: String, value: Any?) {
         val param = reflectionCache[targetClass].findParameter(name) ?: return
-        arguments[param] = coerceType(value, param)
+        arguments[param] = deserializeValue(value, param)
     }
 
     override fun seedForPropertyValue(propertyName: String): Seed {
@@ -53,7 +53,7 @@ class ObjectSeed<out T: Any>(private val targetClass: KClass<T>,
         return seedForType(this, param, param.type.javaType)
     }
 
-    private fun coerceType(value: Any?, param: KParameter): Any? {
+    private fun deserializeValue(value: Any?, param: KParameter): Any? {
         val serializer = reflectionCache[targetClass].valueSerializerFor(param)
         if (serializer != null) {
             return serializer.deserializeValue(value)

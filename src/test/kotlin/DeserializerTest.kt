@@ -11,6 +11,18 @@ class DeserializerTest {
         assertEquals("x", result.s)
     }
 
+    @Test fun testIntLong() {
+        val result = deserialize<TwoIntProp>(StringReader("""{"i1": 42, "i2": 239}"""))
+        assertEquals(42, result.i1)
+        assertEquals(239, result.i2)
+    }
+
+    @Test fun testTwoBools() {
+        val result = deserialize<TwoBoolProp>(StringReader("""{"b1": true, "b2": false}"""))
+        assertEquals(true, result.b1)
+        assertEquals(false, result.b2)
+    }
+
     @Test fun testObject() {
         val result = deserialize<SingleObjectProp>(StringReader("""{"o": {"s": "x"}}"""))
         assertEquals("x", result.o.s)
