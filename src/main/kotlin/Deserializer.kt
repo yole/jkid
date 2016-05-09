@@ -17,6 +17,9 @@ fun Type.asJavaClass(): Class<Any> = when(this) {
     else -> throw UnsupportedOperationException("Unsupported parameter type $this")
 }
 
+val KParameter.jsonName: String?
+    get() = annotations.filterIsInstance<JsonName>().firstOrNull()?.value ?: name
+
 abstract class Seed(val parent: Seed? = null,
                     val parentParameter: KParameter? = null)  {
 
@@ -51,7 +54,7 @@ class ObjectSeed<out T: Any>(targetClass: KClass<T>,
         return seedForType(this, param, param.type.javaType)
     }
 
-    private fun findParameter(name: String): KParameter? = parameters.find { it.name == name }
+    private fun findParameter(name: String): KParameter? = parameters.find { it.jsonName == name }
 
     private fun coerceType(value: Any?, param: KParameter): Any? {
         if (value == null && !param.type.isMarkedNullable) {

@@ -7,7 +7,7 @@ import kotlin.test.assertFailsWith
 
 class DeserializerTest {
     @Test fun testSimple() {
-        val result = deserialize<SingleStringProp>(StringReader("{\"s\": \"x\"}"))
+        val result = deserialize<SingleStringProp>(StringReader("""{"s": "x"}"""))
         assertEquals("x", result.s)
     }
 
@@ -31,6 +31,11 @@ class DeserializerTest {
     @Test fun testOptionalArg() {
         val result = deserialize<SingleOptionalProp>(StringReader("{}"))
         assertEquals("foo", result.s)
+    }
+
+    @Test fun testJsonName() {
+        val result = deserialize<SingleAnnotatedStringProp>(StringReader("""{"q": "x"}"""))
+        assertEquals("x", result.s)
     }
 
     @Test fun testPropertyTypeMismatch() {
@@ -60,4 +65,6 @@ class DeserializerTest {
     data class SingleObjectListProp(val o: List<SingleStringProp>)
 
     data class SingleOptionalProp(val s: String = "foo")
+
+    data class SingleAnnotatedStringProp(@JsonName("q") val s: String)
 }
