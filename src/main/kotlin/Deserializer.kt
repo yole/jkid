@@ -21,8 +21,8 @@ fun Type.asJavaClass(): Class<Any> = when(this) {
 abstract class Seed(val reflectionCache: ReflectionCache,
                     val onDone: (Any?) -> Unit = {}) {
 
-    abstract fun setProperty(name: String, value: Any?)
-    abstract fun seedForPropertyValue(propertyName: String): Seed
+    abstract fun setSimpleValue(propertyName: String, value: Any?)
+    abstract fun buildCompositeValue(propertyName: String): Seed
     abstract fun done()
 
     internal fun seedForType(paramType: Type, onDone: (Any?) -> Unit): Seed {
@@ -46,12 +46,12 @@ class ObjectSeed<out T: Any>(private val targetClass: KClass<T>,
     private val parameters = constructor.parameters
     private val arguments = mutableMapOf<KParameter, Any?>()
 
-    override fun setProperty(name: String, value: Any?) {
-        val param = reflectionCache[targetClass].findParameter(name) ?: return
+    override fun setSimpleValue(propertyName: String, value: Any?) {
+        val param = reflectionCache[targetClass].findParameter(propertyName) ?: return
         arguments[param] = deserializeValue(value, param)
     }
 
-    override fun seedForPropertyValue(propertyName: String): Seed {
+    override fun buildCompositeValue(propertyName: String): Seed {
         val param = reflectionCache[targetClass].findParameter(propertyName) ?: return DeadSeed(this)
 
         return seedForType(param.type.javaType) { value -> arguments[param] = value }
@@ -96,11 +96,11 @@ class CollectionSeed(val elementType: Type,
 
     private val elements = mutableListOf<Any?>()
 
-    override fun setProperty(name: String, value: Any?) {
+    override fun setSimpleValue(propertyName: String, value: Any?) {
         elements.add(value)
     }
 
-    override fun seedForPropertyValue(propertyName: String): Seed {
+    override fun buildCompositeValue(propertyName: String): Seed {
         return seedForType(elementType) { value -> elements.add(value) }
     }
 
@@ -110,8 +110,8 @@ class CollectionSeed(val elementType: Type,
 }
 
 class DeadSeed(parent: Seed) : Seed(parent.reflectionCache, {}) {
-    override fun setProperty(name: String, value: Any?) { }
-    override fun seedForPropertyValue(propertyName: String): Seed = this
+    override fun setSimpleValue(propertyName: String, value: Any?) { }
+    override fun buildCompositeValue(propertyName: String): Seed = this
     override fun done() {}
 }
 
@@ -123,7 +123,7 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
     val callback = object : JsonParseCallback {
         override fun enterObject(propertyName: String) {
             seedStack.push(currentSeed)
-            currentSeed = currentSeed.seedForPropertyValue(propertyName)
+            currentSeed = currentSeed.buildCompositeValue(propertyName)
         }
 
         override fun leaveObject() {
@@ -140,7 +140,7 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
         }
 
         override fun visitProperty(propertyName: String, value: Token.ValueToken) {
-            currentSeed.setProperty(propertyName, value.value)
+            currentSeed.setSimpleValue(propertyName, value.value)
         }
     }
     val parser = Parser(json, callback)
