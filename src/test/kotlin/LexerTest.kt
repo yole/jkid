@@ -28,6 +28,15 @@ class LexerTest {
         verifyTokens("null", Token.NullValue)
     }
 
+    @Test fun testEscapeSequences() {
+        verifyTokens(""""\\"""", Token.StringValue("\\"))
+        verifyTokens(""""\""""", Token.StringValue("\""))
+        verifyTokens(""""\/"""", Token.StringValue("/"))
+        verifyTokens(""""\n"""", Token.StringValue("\n"))
+        verifyTokens(""""\u0041"""", Token.StringValue("A"))
+    }
+
+
     @Test fun testNullMalformed() {
         verifyMalformed("nulll")
     }

@@ -31,7 +31,7 @@ interface Token {
 
 class MalformedJSONException(message: String): Exception(message)
 
-class CharReader(val reader: Reader) {
+internal class CharReader(val reader: Reader) {
     private val tokenBuffer = CharArray(4)
     private var nextChar: Char? = null
     var eof = false
@@ -57,10 +57,17 @@ class CharReader(val reader: Reader) {
 
     fun readNext() = peekNext().apply { nextChar = null }
 
-    fun expectText(text: String, followedBy: Set<Char>) {
+    fun readNextChars(length: Int): String {
         assert(nextChar == null)
-        if (reader.read(tokenBuffer, 0, text.length) != text.length ||
-                String(tokenBuffer, 0, text.length) != text) {
+        assert(length <= tokenBuffer.size)
+        if (reader.read(tokenBuffer, 0, length) != length) {
+            throw MalformedJSONException("Premature end of data")
+        }
+        return String(tokenBuffer, 0, length)
+    }
+
+    fun expectText(text: String, followedBy: Set<Char>) {
+        if (readNextChars(text.length) != text) {
             throw MalformedJSONException("Expected text $text")
         }
         val next = peekNext()
@@ -72,7 +79,10 @@ class CharReader(val reader: Reader) {
 class Lexer(reader: Reader) {
     private val charReader = CharReader(reader)
 
-    val valueEndChars = setOf(',', '}', ']', ' ', '\t', '\r', '\n')
+    companion object {
+        val valueEndChars = setOf(',', '}', ']', ' ', '\t', '\r', '\n')
+    }
+
     val tokenMap = hashMapOf<Char, (Char) -> Token> (
         ',' to { c -> Token.COMMA },
         '{' to { c -> Token.LBRACE },
@@ -96,7 +106,25 @@ class Lexer(reader: Reader) {
         while (true) {
             val c = charReader.readNext() ?: throw MalformedJSONException("Unterminated string")
             if (c == '"') break
-            result.append(c)
+            if (c == '\\') {
+                val escaped = charReader.readNext() ?: throw MalformedJSONException("Unterminated escape sequence")
+                when(escaped) {
+                    '\\', '/', '\"' -> result.append(escaped)
+                    'b' -> result.append('\b')
+                    'f' -> result.append('\u000C')
+                    'n' -> result.append('\n')
+                    'r' -> result.append('\r')
+                    't' -> result.append('\t')
+                    'u' -> {
+                        val hexChars = charReader.readNextChars(4)
+                        result.append(Integer.parseInt(hexChars, 16).toChar())
+                    }
+                    else -> throw MalformedJSONException("Unsupported escape sequence \\$escaped")
+                }
+            }
+            else {
+                result.append(c)
+            }
         }
         return Token.StringValue(result.toString())
     }
