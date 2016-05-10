@@ -9,7 +9,18 @@ inline fun <reified T> KAnnotatedElement.findAnnotation(): T? = annotations.filt
 
 private fun StringBuilder.serializeString(s: String) {
     append('\"')
-    append(s)  // TODO escape special characters
+    for (c in s) {
+        append(when (c) {
+            '\\' -> "\\\\"
+            '\"' -> "\\\""
+            '\b' -> "\\b"
+            '\u000C' -> "\\f"
+            '\n' -> "\\n"
+            '\r' -> "\\r"
+            '\t' -> "\\t"
+            else -> c
+        })
+    }
     append('\"')
 }
 

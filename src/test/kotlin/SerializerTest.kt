@@ -38,4 +38,9 @@ class SerializerTest {
         val result = serialize(SingleCustomSerializedProp(1))
         assertEquals("""{"x": "ONE"}""", result)
     }
+
+    @Test fun testEscapeSequences() {
+        val result = serialize(SingleStringProp("\\\""))
+        assertEquals("""{"s": "\\\""}""", result)
+    }
 }
