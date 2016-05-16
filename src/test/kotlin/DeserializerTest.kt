@@ -98,6 +98,8 @@ data class SingleOptionalProp(val s: String = "foo")
 
 data class SingleAnnotatedStringProp(@JsonName("q") val s: String)
 
+data class TwoPropsOneExcluded(val s: String, @JsonExclude val x: String = "")
+
 class NumberSerializer: ValueSerializer<Int> {
     override fun deserializeValue(jsonValue: Any?): Int = when(jsonValue) {
         "ZERO" -> 0

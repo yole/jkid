@@ -43,4 +43,9 @@ class SerializerTest {
         val result = serialize(SingleStringProp("\\\""))
         assertEquals("""{"s": "\\\""}""", result)
     }
+
+    @Test fun testJsonExclude() {
+        val result = serialize(TwoPropsOneExcluded("foo", "bar"))
+        assertEquals("""{"s": "foo"}""", result)
+    }
 }

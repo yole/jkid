@@ -3,6 +3,9 @@ package ru.yole.jkid
 import kotlin.reflect.KClass
 
 @Target(AnnotationTarget.PROPERTY)
+annotation class JsonExclude
+
+@Target(AnnotationTarget.PROPERTY)
 annotation class JsonName(val value: String)
 
 @Target(AnnotationTarget.PROPERTY)

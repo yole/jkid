@@ -40,6 +40,7 @@ private fun StringBuilder.serializeProperty(prop: KProperty<Any?>, value: Any?) 
     if (jsonSerializer != null) {
         val primaryConstructor = jsonSerializer.serializerClass.primaryConstructor
                 ?: throw IllegalArgumentException("Class specified as @JsonSerializer must have a no-arg primary constructor")
+        @Suppress("UNCHECKED_CAST")
         val valueSerializer = primaryConstructor.call() as ValueSerializer<Any?>
         serializePropertyValue(valueSerializer.serializeValue(value))
     }
@@ -51,6 +52,7 @@ private fun StringBuilder.serializeProperty(prop: KProperty<Any?>, value: Any?) 
 private fun StringBuilder.serializeObject(x: Any) {
     append("{")
     for ((i, prop) in x.javaClass.kotlin.memberProperties.withIndex()) {
+        if (prop.findAnnotation<JsonExclude>() != null) continue
         if (i > 0) append(", ")
         serializeProperty(prop, prop.get(x))
     }
