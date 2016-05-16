@@ -27,7 +27,7 @@ class ClassReflectionCache(cls: KClass<*>) {
         val prop = cls.declaredMemberProperties.find { it.name == paramName }
         if (prop != null) {
             val jsonName = prop.annotations.filterIsInstance<JsonName>().singleOrNull()
-            jsonNameToParamMap[jsonName?.value ?: paramName] = param
+            jsonNameToParamMap[jsonName?.name ?: paramName] = param
 
             val jsonSerializer = prop.annotations.filterIsInstance<JsonSerializer>().singleOrNull()
             if (jsonSerializer != null) {

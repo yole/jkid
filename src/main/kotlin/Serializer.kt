@@ -33,7 +33,7 @@ private fun StringBuilder.serializePropertyValue(value: Any?) = when(value) {
 }
 
 private fun StringBuilder.serializeProperty(prop: KProperty<Any?>, value: Any?) {
-    serializeString(prop.findAnnotation<JsonName>()?.value ?: prop.name)
+    serializeString(prop.findAnnotation<JsonName>()?.name ?: prop.name)
     append(": ")
 
     val jsonSerializer = prop.findAnnotation<JsonSerializer>()
