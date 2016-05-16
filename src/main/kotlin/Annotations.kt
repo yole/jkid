@@ -8,10 +8,10 @@ annotation class JsonExclude
 @Target(AnnotationTarget.PROPERTY)
 annotation class JsonName(val name: String)
 
+interface ValueSerializer<T> {
+    fun serializeValue(value: T): Any?
+    fun deserializeValue(jsonValue: Any?): T
+}
+
 @Target(AnnotationTarget.PROPERTY)
 annotation class JsonSerializer(val serializerClass: KClass<out ValueSerializer<*>>)
-
-interface ValueSerializer<T> {
-    fun deserializeValue(jsonValue: Any?): T
-    fun serializeValue(value: T): Any?
-}
