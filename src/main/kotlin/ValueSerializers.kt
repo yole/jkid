@@ -44,5 +44,6 @@ private fun Any?.expectNumber(): Number {
 class TimestampSerializer : ValueSerializer<Date> {
     override fun serializeValue(value: Date): Any? = value.time
 
-    override fun deserializeValue(jsonValue: Any?): Date = Date(jsonValue.expectNumber().toLong())
+    override fun deserializeValue(jsonValue: Any?): Date
+        = Date((jsonValue as Number).toLong())
 }
