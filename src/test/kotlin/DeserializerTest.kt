@@ -2,6 +2,7 @@ package ru.yole.jkid
 
 import org.junit.Test
 import java.io.StringReader
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -61,6 +62,11 @@ class DeserializerTest {
         assertEquals(1, result.x)
     }
 
+    @Test fun testTimestampSerializer() {
+        val result = deserialize<SingleDateProp>(StringReader("""{"x": 2000}"""))
+        assertEquals(2000, result.x.time)
+    }
+
     @Test fun testPropertyTypeMismatch() {
         assertFailsWith<SchemaMismatchException> {
             deserialize<SingleStringProp>(StringReader("{\"s\": 1}"))
@@ -115,3 +121,5 @@ class NumberSerializer: ValueSerializer<Int> {
 }
 
 data class SingleCustomSerializedProp(@JsonSerializer(NumberSerializer::class) val x: Int)
+
+data class SingleDateProp(@JsonSerializer(TimestampSerializer::class) val x: Date)
