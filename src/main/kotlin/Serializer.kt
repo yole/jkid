@@ -5,7 +5,8 @@ import kotlin.reflect.KProperty
 import kotlin.reflect.memberProperties
 import kotlin.reflect.primaryConstructor
 
-inline fun <reified T> KAnnotatedElement.findAnnotation(): T? = annotations.filterIsInstance<T>().firstOrNull()
+inline fun <reified T> KAnnotatedElement.findAnnotation(): T?
+        = annotations.filterIsInstance<T>().firstOrNull()
 
 private fun StringBuilder.serializeString(s: String) {
     append('\"')
@@ -49,28 +50,41 @@ private fun StringBuilder.serializeProperty(prop: KProperty<Any?>, value: Any?) 
     }
 }
 
-private fun StringBuilder.serializeObject(x: Any) {
-    append("{")
-    for ((i, prop) in x.javaClass.kotlin.memberProperties.withIndex()) {
-        if (prop.findAnnotation<JsonExclude>() != null) continue
+private fun <T> StringBuilder.appendCommaSeparated(
+        items: Collection<T>,
+        callback: (T) -> Unit) {
+
+    for ((i, item) in items.withIndex()) {
         if (i > 0) append(", ")
-        serializeProperty(prop, prop.get(x))
+        callback(item)
     }
+}
+
+private fun StringBuilder.serializeObject(obj: Any) {
+    append("{")
+    val properties = obj.javaClass.kotlin
+        .memberProperties
+        .filter {
+            it.findAnnotation<JsonExclude>() == null
+        }
+
+    appendCommaSeparated(properties) { prop ->
+        val propertyValue = prop.get(obj)
+        serializeProperty(prop, propertyValue)
+    }
+
     append("}")
 }
 
 private fun StringBuilder.serializeArray(data: List<Any>) {
     append("[")
-    for ((i, x) in data.withIndex()) {
-        if (i > 0) append(", ")
-        serializePropertyValue(x)
+    appendCommaSeparated(data) {
+        serializePropertyValue(it)
     }
     append("]")
 
 }
 
-fun serialize(x: Any): String {
-    val result = StringBuilder()
-    result.serializeObject(x)
-    return result.toString()
+fun serialize(obj: Any): String = buildString {
+    serializeObject(obj)
 }
