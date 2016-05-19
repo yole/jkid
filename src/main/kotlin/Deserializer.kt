@@ -60,7 +60,7 @@ class ObjectSeed<out T: Any>(private val targetClass: KClass<T>,
     private fun deserializeValue(value: Any?, param: KParameter): Any? {
         val serializer = reflectionCache[targetClass].valueSerializerFor(param)
         if (serializer != null) {
-            return serializer.deserializeValue(value)
+            return serializer.fromJsonValue(value)
         }
 
         if (value == null && !param.type.isMarkedNullable) {

@@ -29,12 +29,8 @@ class ClassReflectionCache(cls: KClass<*>) {
             val jsonName = prop.annotations.filterIsInstance<JsonName>().singleOrNull()
             jsonNameToParamMap[jsonName?.name ?: paramName] = param
 
-            val jsonSerializer = prop.annotations.filterIsInstance<JsonSerializer>().singleOrNull()
-            if (jsonSerializer != null) {
-                val primaryConstructor = jsonSerializer.serializerClass.primaryConstructor
-                    ?: throw IllegalArgumentException("Class specified as @JsonSerializer must have a no-arg primary constructor")
-                val valueSerializer = primaryConstructor.call() as ValueSerializer<Any?>
-
+            val valueSerializer = prop.getSerializer()
+            if (valueSerializer != null) {
                 paramToSerializerMap[param] = valueSerializer
             }
             else {

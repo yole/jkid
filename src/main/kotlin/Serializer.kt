@@ -1,12 +1,75 @@
 package ru.yole.jkid
 
 import kotlin.reflect.KAnnotatedElement
+import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.memberProperties
-import kotlin.reflect.primaryConstructor
+
+fun serialize(obj: Any): String = buildString {
+    serializeObject(obj)
+}
+
+private fun StringBuilder.serializeObject(obj: Any) {
+    append("{")
+    val properties = obj.javaClass.kotlin
+            .memberProperties
+            .filter {
+                it.findAnnotation<JsonExclude>() == null
+            }
+
+    appendCommaSeparated(properties) { prop ->
+        val propertyValue = prop.get(obj)
+        serializeProperty(prop, propertyValue)
+    }
+
+    append("}")
+}
 
 inline fun <reified T> KAnnotatedElement.findAnnotation(): T?
         = annotations.filterIsInstance<T>().firstOrNull()
+
+private fun <T> StringBuilder.appendCommaSeparated(
+        items: Collection<T>,
+        callback: (T) -> Unit) {
+
+    for ((i, item) in items.withIndex()) {
+        if (i > 0) append(", ")
+        callback(item)
+    }
+}
+
+private fun StringBuilder.serializeProperty(prop: KProperty<Any?>,
+                                            value: Any?) {
+    val key = prop.findAnnotation<JsonName>()?.name
+            ?: prop.name
+    val jsonValue = prop.getSerializer()
+            ?.toJsonValue(value)
+            ?: value
+
+    serializeString(key)
+    append(": ")
+    serializePropertyValue(jsonValue)
+}
+
+fun KProperty<*>.getSerializer(): ValueSerializer<Any?>? {
+    val jsonSerializer = findAnnotation<JsonSerializer>()
+            ?: return null
+    val serializerClass = jsonSerializer.serializerClass
+
+    @Suppress("UNCHECKED_CAST")
+    return (serializerClass.objectInstance
+                ?: serializerClass.newInstance())
+            as ValueSerializer<Any?>
+}
+
+fun <T : Any> KClass<T>.newInstance(): T {
+    val noArgConstructor = constructors.singleOrNull {
+        it.parameters.isEmpty()
+    } ?: throw IllegalArgumentException(
+            "Class must have a no-argument constructor")
+
+    return noArgConstructor.call()
+}
 
 private fun StringBuilder.serializeString(s: String) {
     append('\"')
@@ -25,55 +88,14 @@ private fun StringBuilder.serializeString(s: String) {
     append('\"')
 }
 
-private fun StringBuilder.serializePropertyValue(value: Any?) = when(value) {
-    null -> append("null")
-    is String -> serializeString(value)
-    is Number, is Boolean -> append(value.toString())
-    is List<*> -> serializeArray(value as List<Any>)
-    else -> serializeObject(value)
-}
-
-private fun StringBuilder.serializeProperty(prop: KProperty<Any?>, value: Any?) {
-    serializeString(prop.findAnnotation<JsonName>()?.name ?: prop.name)
-    append(": ")
-
-    val jsonSerializer = prop.findAnnotation<JsonSerializer>()
-    if (jsonSerializer != null) {
-        val primaryConstructor = jsonSerializer.serializerClass.primaryConstructor
-                ?: throw IllegalArgumentException("Class specified as @JsonSerializer must have a no-arg primary constructor")
-        @Suppress("UNCHECKED_CAST")
-        val valueSerializer = primaryConstructor.call() as ValueSerializer<Any?>
-        serializePropertyValue(valueSerializer.serializeValue(value))
+private fun StringBuilder.serializePropertyValue(value: Any?) {
+    when(value) {
+        null -> append("null")
+        is String -> serializeString(value)
+        is Number, is Boolean -> append(value.toString())
+        is List<*> -> serializeArray(value as List<Any>)
+        else -> serializeObject(value)
     }
-    else {
-        serializePropertyValue(value)
-    }
-}
-
-private fun <T> StringBuilder.appendCommaSeparated(
-        items: Collection<T>,
-        callback: (T) -> Unit) {
-
-    for ((i, item) in items.withIndex()) {
-        if (i > 0) append(", ")
-        callback(item)
-    }
-}
-
-private fun StringBuilder.serializeObject(obj: Any) {
-    append("{")
-    val properties = obj.javaClass.kotlin
-        .memberProperties
-        .filter {
-            it.findAnnotation<JsonExclude>() == null
-        }
-
-    appendCommaSeparated(properties) { prop ->
-        val propertyValue = prop.get(obj)
-        serializeProperty(prop, propertyValue)
-    }
-
-    append("}")
 }
 
 private fun StringBuilder.serializeArray(data: List<Any>) {
@@ -83,8 +105,4 @@ private fun StringBuilder.serializeArray(data: List<Any>) {
     }
     append("]")
 
-}
-
-fun serialize(obj: Any): String = buildString {
-    serializeObject(obj)
 }

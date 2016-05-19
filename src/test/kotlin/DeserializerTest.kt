@@ -107,13 +107,13 @@ data class SingleAnnotatedStringProp(@JsonName("q") val s: String)
 data class TwoPropsOneExcluded(val s: String, @JsonExclude val x: String = "")
 
 class NumberSerializer: ValueSerializer<Int> {
-    override fun deserializeValue(jsonValue: Any?): Int = when(jsonValue) {
+    override fun fromJsonValue(jsonValue: Any?): Int = when(jsonValue) {
         "ZERO" -> 0
         "ONE" -> 1
         else -> throw SchemaMismatchException("Unexpected value $jsonValue")
     }
 
-    override fun serializeValue(value: Int): Any? = when(value) {
+    override fun toJsonValue(value: Int): Any? = when(value) {
         0 -> "ZERO"
         1 -> "ONE"
         else -> "?"
