@@ -4,11 +4,11 @@ import java.io.Reader
 
 interface Token {
     object COMMA : Token
+    object COLON : Token
     object LBRACE : Token
     object RBRACE : Token
     object LBRACKET : Token
     object RBRACKET : Token
-    object COLON : Token
 
     interface ValueToken : Token {
         val value: Any?
@@ -80,10 +80,10 @@ class Lexer(reader: Reader) {
     private val charReader = CharReader(reader)
 
     companion object {
-        val valueEndChars = setOf(',', '}', ']', ' ', '\t', '\r', '\n')
+        private val valueEndChars = setOf(',', '}', ']', ' ', '\t', '\r', '\n')
     }
 
-    val tokenMap = hashMapOf<Char, (Char) -> Token> (
+    private val tokenMap = hashMapOf<Char, (Char) -> Token> (
         ',' to { c -> Token.COMMA },
         '{' to { c -> Token.LBRACE },
         '}' to { c -> Token.RBRACE },
@@ -101,7 +101,18 @@ class Lexer(reader: Reader) {
         }
     }
 
-    fun readStringToken(): Token {
+    fun nextToken(): Token? {
+        var c: Char?
+        do {
+            c = charReader.readNext()
+        } while (c != null && c.isWhitespace())
+        if (c == null) return null
+
+        return tokenMap[c.toChar()]?.invoke(c)
+                ?: throw MalformedJSONException("Unexpected token $c")
+    }
+
+    private fun readStringToken(): Token {
         val result = StringBuilder()
         while (true) {
             val c = charReader.readNext() ?: throw MalformedJSONException("Unterminated string")
@@ -129,7 +140,7 @@ class Lexer(reader: Reader) {
         return Token.StringValue(result.toString())
     }
 
-    fun readNumberToken(firstChar: Char): Token {
+    private fun readNumberToken(firstChar: Char): Token {
         val buffer = StringBuilder(firstChar.toString())
         while (true) {
             val c = charReader.peekNext()
@@ -137,16 +148,5 @@ class Lexer(reader: Reader) {
             buffer.append(charReader.readNext())
         }
         return Token.NumberValue(java.lang.Double.parseDouble(buffer.toString()))
-    }
-
-    fun nextToken(): Token? {
-        var c: Char?
-        do {
-            c = charReader.readNext()
-        } while (c != null && c.isWhitespace())
-        if (c == null) return null
-
-        return tokenMap[c.toChar()]?.invoke(c)
-                ?: throw MalformedJSONException("Unexpected token $c")
     }
 }

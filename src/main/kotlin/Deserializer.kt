@@ -139,8 +139,8 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
             leaveObject()
         }
 
-        override fun visitProperty(propertyName: String, value: Token.ValueToken) {
-            currentSeed.setSimpleValue(propertyName, value.value)
+        override fun visitProperty(propertyName: String, value: Any?) {
+            currentSeed.setSimpleValue(propertyName, value)
         }
     }
     val parser = Parser(json, callback)
