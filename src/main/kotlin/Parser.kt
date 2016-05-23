@@ -83,5 +83,5 @@ class Parser(reader: Reader, val callback: JsonParseCallback) {
         }
     }
 
-    private fun nextToken(): Token = lexer.nextToken() ?: throw IllegalArgumentException("Premature end of dat")
+    private fun nextToken(): Token = lexer.nextToken() ?: throw IllegalArgumentException("Premature end of data")
 }
