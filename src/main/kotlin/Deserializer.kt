@@ -139,7 +139,7 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
             leaveObject()
         }
 
-        override fun visitProperty(propertyName: String, value: Any?) {
+        override fun visitValue(propertyName: String, value: Any?) {
             currentSeed.setSimpleValue(propertyName, value)
         }
     }

@@ -8,13 +8,13 @@ import kotlin.test.assertFailsWith
 
 class ParserTest {
     @Test fun testTrivial() {
-        verifyParse("""{"s": "x"}""", VisitProperty("s", "x"))
+        verifyParse("""{"s": "x"}""", VisitValue("s", "x"))
     }
 
     @Test fun testTwoProperties() {
         verifyParse("""{"s": "x", "f": 1}""",
-                VisitProperty("s", "x"),
-                VisitProperty("f", 1.0))
+                VisitValue("s", "x"),
+                VisitValue("f", 1.0))
     }
 
     @Test fun testMissingComma() {
@@ -24,15 +24,15 @@ class ParserTest {
     @Test fun testNestedObject() {
         verifyParse("""{"s": {"x": 1}}""",
                 EnterObject("s"),
-                VisitProperty("x", 1.0),
+                VisitValue("x", 1.0),
                 LeaveObject)
     }
 
     @Test fun testArray() {
         verifyParse("""{"s": [1, 2]}""",
                 EnterArray("s"),
-                VisitProperty("s", 1.0),
-                VisitProperty("s", 2.0),
+                VisitValue("s", 1.0),
+                VisitValue("s", 2.0),
                 LeaveArray)
     }
 
@@ -40,10 +40,10 @@ class ParserTest {
         verifyParse("""{"s": [{"x": 1}, {"x": 2}]}""",
                 EnterArray("s"),
                 EnterObject("s"),
-                VisitProperty("x", 1.0),
+                VisitValue("x", 1.0),
                 LeaveObject,
                 EnterObject("s"),
-                VisitProperty("x", 2.0),
+                VisitValue("x", 2.0),
                 LeaveObject,
                 LeaveArray)
     }
@@ -66,7 +66,7 @@ class ParserTest {
     interface JsonParseCallbackCall {
         data class EnterObject(val propertyName: String) : JsonParseCallbackCall
         data class EnterArray(val propertyName: String) : JsonParseCallbackCall
-        data class VisitProperty(val propertyName: String, val value: Any?) : JsonParseCallbackCall
+        data class VisitValue(val propertyName: String, val value: Any?) : JsonParseCallbackCall
         object LeaveObject : JsonParseCallbackCall
         object LeaveArray : JsonParseCallbackCall
     }
@@ -90,8 +90,8 @@ class ParserTest {
             calls.add(LeaveArray)
         }
 
-        override fun visitProperty(propertyName: String, value: Any?) {
-            calls.add(VisitProperty(propertyName, value))
+        override fun visitValue(propertyName: String, value: Any?) {
+            calls.add(VisitValue(propertyName, value))
         }
     }
 }

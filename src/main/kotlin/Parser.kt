@@ -7,7 +7,7 @@ interface JsonParseCallback {
     fun leaveObject()
     fun enterArray(propertyName: String)
     fun leaveArray()
-    fun visitProperty(propertyName: String, value: Any?)
+    fun visitValue(propertyName: String, value: Any?)
 }
 
 class Parser(reader: Reader, val callback: JsonParseCallback) {
@@ -58,7 +58,7 @@ class Parser(reader: Reader, val callback: JsonParseCallback) {
     private fun parsePropertyValue(propName: String, token: Token) {
         when (token) {
             is Token.ValueToken ->
-                callback.visitProperty(propName, token.value)
+                callback.visitValue(propName, token.value)
 
             Token.LBRACE -> {
                 callback.enterObject(propName)
