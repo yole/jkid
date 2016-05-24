@@ -7,7 +7,7 @@ import kotlin.reflect.declaredMemberProperties
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.primaryConstructor
 
-class ClassReflectionCache(cls: KClass<*>) {
+class ConstructorParameterCache(cls: KClass<*>) {
     private val jsonNameToParamMap = hashMapOf<String, KParameter>()
     private val paramToSerializerMap = hashMapOf<KParameter, ValueSerializer<out Any?>>()
 
@@ -22,22 +22,20 @@ class ClassReflectionCache(cls: KClass<*>) {
 
     private fun cacheDataForParameter(cls: KClass<*>, param: KParameter) {
         val paramName = param.name
-                ?: throw UnsupportedOperationException("Class has constructor parameter without name")
+                ?: throw UnsupportedOperationException(
+                    "Class has constructor parameter without name")
 
-        val prop = cls.declaredMemberProperties.find { it.name == paramName }
+        val prop = cls.declaredMemberProperties.find {
+            it.name == paramName
+        }
         if (prop != null) {
-            val jsonName = prop.annotations.filterIsInstance<JsonName>().singleOrNull()
+            val jsonName = prop.findAnnotation<JsonName>()
             jsonNameToParamMap[jsonName?.name ?: paramName] = param
 
             val valueSerializer = prop.getSerializer()
+                    ?: serializerForType(param.type.javaType)
             if (valueSerializer != null) {
                 paramToSerializerMap[param] = valueSerializer
-            }
-            else {
-                val serializerForType = serializerForType(param.type.javaType)
-                if (serializerForType != null) {
-                    paramToSerializerMap[param] = serializerForType
-                }
             }
         }
     }
@@ -47,18 +45,20 @@ class ClassReflectionCache(cls: KClass<*>) {
 }
 
 class ReflectionCache {
-    private val cacheData = hashMapOf<KClass<*>, ClassReflectionCache>()
+    private val cacheData =
+            mutableMapOf<KClass<*>, ConstructorParameterCache>()
 
-    operator fun get(cls: KClass<*>): ClassReflectionCache =
-            cacheData.getOrPut(cls) { ClassReflectionCache(cls) }
+    operator fun get(cls: KClass<*>)  =
+            cacheData.getOrPut(cls) { ConstructorParameterCache(cls) }
 }
 
-fun serializerForType(type: Type): ValueSerializer<out Any?>? = when(type) {
-    Byte::class.java -> ByteSerializer
-    Short::class.java -> ShortSerializer
-    Int::class.java -> IntSerializer
-    Long::class.java -> LongSerializer
-    Float::class.java -> FloatSerializer
-    Boolean::class.java -> BooleanSerializer
-    else -> null
-}
+fun serializerForType(type: Type): ValueSerializer<out Any?>? =
+        when(type) {
+            Byte::class.java -> ByteSerializer
+            Short::class.java -> ShortSerializer
+            Int::class.java -> IntSerializer
+            Long::class.java -> LongSerializer
+            Float::class.java -> FloatSerializer
+            Boolean::class.java -> BooleanSerializer
+            else -> null
+        }

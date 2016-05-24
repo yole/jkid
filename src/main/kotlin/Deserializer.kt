@@ -14,75 +14,91 @@ class SchemaMismatchException(message: String) : Exception(message)
 fun Type.asJavaClass(): Class<Any> = when(this) {
     is Class<*> -> this as Class<Any>
     is ParameterizedType -> rawType as? Class<Any>
-            ?: throw UnsupportedOperationException("Unsupported parameter type $this")
-    else -> throw UnsupportedOperationException("Unsupported parameter type $this")
+            ?: throw UnsupportedOperationException("Unknown type $this")
+    else -> throw UnsupportedOperationException("Unknown type $this")
 }
 
 abstract class Seed(val reflectionCache: ReflectionCache,
-                    val onDone: (Any?) -> Unit = {}) {
+                    val onDone: (Any) -> Unit = {}) {
 
     abstract fun setSimpleValue(propertyName: String, value: Any?)
     abstract fun buildCompositeValue(propertyName: String): Seed
     abstract fun done()
 
-    internal fun seedForType(paramType: Type, onDone: (Any?) -> Unit): Seed {
+    internal fun seedForType(paramType: Type, onDone: (Any) -> Unit): Seed {
         val paramClass = paramType.asJavaClass()
 
         if (Collection::class.java.isAssignableFrom(paramClass)) {
-            val parameterizedType = paramType as? ParameterizedType ?:
-                    throw UnsupportedOperationException("Unsupported parameter type $this")
+            val parameterizedType = paramType as? ParameterizedType
+                    ?: throw UnsupportedOperationException(
+                        "Unsupported parameter type $this")
 
-            return CollectionSeed(parameterizedType.actualTypeArguments.single(), reflectionCache, onDone)
+            val elementType = parameterizedType.actualTypeArguments.single()
+            return CollectionSeed(elementType, reflectionCache, onDone)
         }
         return ObjectSeed(paramClass.kotlin, reflectionCache, onDone)
     }
 }
 
-class ObjectSeed<out T: Any>(private val targetClass: KClass<T>,
+class ObjectSeed<out T: Any>(targetClass: KClass<T>,
                              reflectionCache: ReflectionCache,
-                             onDone: (Any?) -> Unit = {}) : Seed(reflectionCache, onDone) {
+                             onDone: (Any) -> Unit = {})
+        : Seed(reflectionCache, onDone) {
+
     private val constructor = targetClass.primaryConstructor
-            ?: throw UnsupportedOperationException("Only classes with primary constructor can be deserialized")
-    private val parameters = constructor.parameters
+            ?: throw UnsupportedOperationException(
+                "Only classes with primary constructor can be deserialized")
+
+    private val constructorParameterCache = reflectionCache[targetClass]
+
     private val arguments = mutableMapOf<KParameter, Any?>()
 
     override fun setSimpleValue(propertyName: String, value: Any?) {
-        val param = reflectionCache[targetClass].findParameter(propertyName) ?: return
+        val param = constructorParameterCache.findParameter(propertyName)
+                ?: return
         arguments[param] = deserializeValue(value, param)
     }
 
     override fun buildCompositeValue(propertyName: String): Seed {
-        val param = reflectionCache[targetClass].findParameter(propertyName) ?: return DeadSeed(this)
+        val param = constructorParameterCache.findParameter(propertyName)
+                ?: return DeadSeed(this)
 
-        return seedForType(param.type.javaType) { value -> arguments[param] = value }
+        return seedForType(param.type.javaType) { value ->
+            arguments[param] = value
+        }
     }
 
     private fun deserializeValue(value: Any?, param: KParameter): Any? {
-        val serializer = reflectionCache[targetClass].valueSerializerFor(param)
+        val serializer = constructorParameterCache.valueSerializerFor(param)
         if (serializer != null) {
             return serializer.fromJsonValue(value)
         }
 
+        validateArgumentType(param, value)
+        return value
+    }
+
+    private fun validateArgumentType(param: KParameter, value: Any?) {
         if (value == null && !param.type.isMarkedNullable) {
             throw SchemaMismatchException("Received null value for non-null parameter ${param.name}")
         }
-        if (value != null) {
-            if (value.javaClass != param.type.javaType) {
-                throw SchemaMismatchException("Type mismatch for parameter ${param.name}: " +
-                        "expected ${param.type.javaType}, found ${value.javaClass}")
-            }
+        if (value != null && value.javaClass != param.type.javaType) {
+            throw SchemaMismatchException("Type mismatch for parameter ${param.name}: " +
+                    "expected ${param.type.javaType}, found ${value.javaClass}")
         }
-        return value
-
     }
 
     fun spawn(): T {
-        for (param in parameters) {
+        ensureAllParametersPresent()
+        return constructor.callBy(arguments)
+    }
+
+    private fun ensureAllParametersPresent() {
+        for (param in constructor.parameters) {
             if (arguments[param] == null && !param.isOptional && !param.type.isMarkedNullable) {
                 throw SchemaMismatchException("Missing value for parameter ${param.name}")
             }
         }
-        return constructor.callBy(arguments)
     }
 
     override fun done() {
@@ -92,7 +108,7 @@ class ObjectSeed<out T: Any>(private val targetClass: KClass<T>,
 
 class CollectionSeed(val elementType: Type,
                      reflectionCache: ReflectionCache,
-                     onDone: (Any?) -> Unit) : Seed(reflectionCache, onDone) {
+                     onDone: (Any) -> Unit) : Seed(reflectionCache, onDone) {
 
     private val elements = mutableListOf<Any?>()
 
