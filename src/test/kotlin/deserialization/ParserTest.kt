@@ -1,7 +1,7 @@
-package ru.yole.jkid
+package ru.yole.jkid.deserialization
 
 import org.junit.Test
-import ru.yole.jkid.ParserTest.JsonParseCallbackCall.*
+import ru.yole.jkid.deserialization.ParserTest.JsonParseCallbackCall.*
 import java.io.StringReader
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

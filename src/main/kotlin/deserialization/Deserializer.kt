@@ -1,5 +1,6 @@
-package ru.yole.jkid
+package ru.yole.jkid.deserialization
 
+import ru.yole.jkid.asJavaClass
 import java.io.Reader
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -9,14 +10,44 @@ import kotlin.reflect.KParameter
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.primaryConstructor
 
-class SchemaMismatchException(message: String) : Exception(message)
-
-fun Type.asJavaClass(): Class<Any> = when(this) {
-    is Class<*> -> this as Class<Any>
-    is ParameterizedType -> rawType as? Class<Any>
-            ?: throw UnsupportedOperationException("Unknown type $this")
-    else -> throw UnsupportedOperationException("Unknown type $this")
+inline fun <reified T: Any> deserialize(json: Reader): T {
+    return deserialize(json, T::class)
 }
+
+fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
+    val seed = ObjectSeed(targetClass, ReflectionCache())
+    var currentSeed: Seed = seed
+    val seedStack = Stack<Seed>()
+
+    val callback = object : JsonParseCallback {
+        override fun enterObject(propertyName: String) {
+            seedStack.push(currentSeed)
+            currentSeed = currentSeed.buildCompositeValue(propertyName)
+        }
+
+        override fun leaveObject() {
+            currentSeed.done()
+            currentSeed = seedStack.pop()
+        }
+
+        override fun enterArray(propertyName: String) {
+            enterObject(propertyName)
+        }
+
+        override fun leaveArray() {
+            leaveObject()
+        }
+
+        override fun visitValue(propertyName: String, value: Any?) {
+            currentSeed.setSimpleValue(propertyName, value)
+        }
+    }
+    val parser = Parser(json, callback)
+    parser.parse()
+    return seed.spawn()
+}
+
+class SchemaMismatchException(message: String) : Exception(message)
 
 abstract class Seed(val reflectionCache: ReflectionCache,
                     val onDone: (Any) -> Unit = {}) {
@@ -131,39 +162,3 @@ class DeadSeed(parent: Seed) : Seed(parent.reflectionCache, {}) {
     override fun done() {}
 }
 
-fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
-    val seed = ObjectSeed(targetClass, ReflectionCache())
-    var currentSeed: Seed = seed
-    val seedStack = Stack<Seed>()
-
-    val callback = object : JsonParseCallback {
-        override fun enterObject(propertyName: String) {
-            seedStack.push(currentSeed)
-            currentSeed = currentSeed.buildCompositeValue(propertyName)
-        }
-
-        override fun leaveObject() {
-            currentSeed.done()
-            currentSeed = seedStack.pop()
-        }
-
-        override fun enterArray(propertyName: String) {
-            enterObject(propertyName)
-        }
-
-        override fun leaveArray() {
-            leaveObject()
-        }
-
-        override fun visitValue(propertyName: String, value: Any?) {
-            currentSeed.setSimpleValue(propertyName, value)
-        }
-    }
-    val parser = Parser(json, callback)
-    parser.parse()
-    return seed.spawn()
-}
-
-inline fun <reified T: Any> deserialize(json: Reader): T {
-    return deserialize(json, T::class)
-}

@@ -1,7 +1,6 @@
-package ru.yole.jkid
+package ru.yole.jkid.serialization
 
-import kotlin.reflect.KAnnotatedElement
-import kotlin.reflect.KClass
+import ru.yole.jkid.*
 import kotlin.reflect.KProperty
 import kotlin.reflect.memberProperties
 
@@ -23,19 +22,6 @@ private fun StringBuilder.serializeObject(obj: Any) {
     }
 
     append("}")
-}
-
-inline fun <reified T> KAnnotatedElement.findAnnotation(): T?
-        = annotations.filterIsInstance<T>().firstOrNull()
-
-private fun <T> StringBuilder.appendCommaSeparated(
-        items: Collection<T>,
-        callback: (T) -> Unit) {
-
-    for ((i, item) in items.withIndex()) {
-        if (i > 0) append(", ")
-        callback(item)
-    }
 }
 
 private fun StringBuilder.serializeProperty(prop: KProperty<Any?>,
@@ -60,15 +46,6 @@ fun KProperty<*>.getSerializer(): ValueSerializer<Any?>? {
     return (serializerClass.objectInstance
                 ?: serializerClass.newInstance())
             as ValueSerializer<Any?>
-}
-
-fun <T : Any> KClass<T>.newInstance(): T {
-    val noArgConstructor = constructors.singleOrNull {
-        it.parameters.isEmpty()
-    } ?: throw IllegalArgumentException(
-            "Class must have a no-argument constructor")
-
-    return noArgConstructor.call()
 }
 
 private fun StringBuilder.serializeString(s: String) {

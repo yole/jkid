@@ -1,5 +1,6 @@
 package ru.yole.jkid
 
+import ru.yole.jkid.deserialization.SchemaMismatchException
 import java.util.*
 
 object ByteSerializer : ValueSerializer<Byte> {
@@ -34,11 +35,6 @@ object BooleanSerializer : ValueSerializer<Boolean> {
     }
 
     override fun toJsonValue(value: Boolean) = value
-}
-
-private fun Any?.expectNumber(): Number {
-    if (this !is Number) throw SchemaMismatchException("Number expected")
-    return this
 }
 
 object TimestampSerializer : ValueSerializer<Date> {

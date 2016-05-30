@@ -1,5 +1,7 @@
-package ru.yole.jkid
+package ru.yole.jkid.deserialization
 
+import ru.yole.jkid.*
+import ru.yole.jkid.serialization.getSerializer
 import java.lang.reflect.Type
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter

@@ -1,4 +1,4 @@
-package ru.yole.jkid
+package ru.yole.jkid.deserialization
 
 import org.junit.Test
 import java.io.StringReader

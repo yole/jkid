@@ -1,6 +1,7 @@
-package ru.yole.jkid
+package ru.yole.jkid.deserialization
 
 import org.junit.Test
+import ru.yole.jkid.*
 import java.io.StringReader
 import java.util.*
 import kotlin.test.assertEquals
