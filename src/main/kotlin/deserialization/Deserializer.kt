@@ -2,6 +2,7 @@ package ru.yole.jkid.deserialization
 
 import ru.yole.jkid.asJavaClass
 import java.io.Reader
+import java.io.StringReader
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
@@ -162,3 +163,7 @@ class DeadSeed(parent: Seed) : Seed(parent.reflectionCache, {}) {
     override fun done() {}
 }
 
+
+inline fun <reified T: Any> deserialize(json: String): T {
+    return deserialize(StringReader(json))
+}
