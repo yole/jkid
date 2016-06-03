@@ -2,56 +2,78 @@ package ru.yole.jkid.serialization
 
 import ru.yole.jkid.*
 import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 import kotlin.reflect.memberProperties
 
-fun serialize(obj: Any): String = buildString {
-    serializeObject(obj)
+fun serialize(obj: Any): String = buildString { serializeObject(obj) }
+
+/* the first implementation discussed in the book */
+private fun StringBuilder.serializeObjectWithoutAnnotation(obj: Any) {
+    val kClass = obj.javaClass.kotlin
+    val properties = kClass.memberProperties
+
+    properties.joinToStringBuilder(this, prefix = "{", postfix = "}") {
+        prop ->
+        serializeString(prop.name)
+        append(": ")
+        serializePropertyValue(prop.get(obj))
+    }
 }
 
 private fun StringBuilder.serializeObject(obj: Any) {
-    append("{")
-    val properties = obj.javaClass.kotlin
-            .memberProperties
-            .filter {
-                it.findAnnotation<JsonExclude>() == null
+    obj.javaClass.kotlin.memberProperties
+            .filter { it.findAnnotation<JsonExclude>() == null }
+            .joinToStringBuilder(this, prefix = "{", postfix = "}") {
+                serializeProperty(it, obj)
             }
-
-    appendCommaSeparated(properties) { prop ->
-        val propertyValue = prop.get(obj)
-        serializeProperty(prop, propertyValue)
-    }
-
-    append("}")
 }
 
-private fun StringBuilder.serializeProperty(prop: KProperty<Any?>,
-                                            value: Any?) {
-    val key = prop.findAnnotation<JsonName>()?.name
-            ?: prop.name
-    val jsonValue = prop.getSerializer()
-            ?.toJsonValue(value)
-            ?: value
-
-    serializeString(key)
+private fun StringBuilder.serializeProperty(
+        prop: KProperty1<Any, *>, obj: Any
+) {
+    val name = prop.findAnnotation<JsonName>()?.name ?: prop.name
+    serializeString(name)
     append(": ")
+
+    val value = prop.get(obj)
+    val jsonValue = prop.getSerializer() ?.toJsonValue(value) ?: value
     serializePropertyValue(jsonValue)
 }
 
 fun KProperty<*>.getSerializer(): ValueSerializer<Any?>? {
-    val jsonSerializer = findAnnotation<JsonSerializer>()
-            ?: return null
-    val serializerClass = jsonSerializer.serializerClass
+    val jsonSerializerAnn = findAnnotation<JsonSerializer>() ?: return null
+    val serializerClass = jsonSerializerAnn.serializerClass
 
+    val valueSerializer = serializerClass.objectInstance
+            ?: serializerClass.newInstance()
     @Suppress("UNCHECKED_CAST")
-    return (serializerClass.objectInstance
-                ?: serializerClass.newInstance())
-            as ValueSerializer<Any?>
+    return valueSerializer as ValueSerializer<Any?>
+}
+
+private fun StringBuilder.serializePropertyValue(value: Any?) {
+    when (value) {
+        null -> append("null")
+        is String -> serializeString(value)
+        is Number, is Boolean -> append(value.toString())
+        is List<*> -> serializeCollection(value as List<Any>)
+        else -> serializeObject(value)
+    }
+}
+
+private fun StringBuilder.serializeCollection(data: List<Any>) {
+    data.joinToStringBuilder(this, prefix = "[", postfix = "]") {
+        serializePropertyValue(it)
+    }
 }
 
 private fun StringBuilder.serializeString(s: String) {
     append('\"')
-    for (c in s) {
-        append(when (c) {
+    s.forEach { append(it.escape()) }
+    append('\"')
+}
+
+private fun Char.escape(): Any =
+        when (this) {
             '\\' -> "\\\\"
             '\"' -> "\\\""
             '\b' -> "\\b"
@@ -59,27 +81,5 @@ private fun StringBuilder.serializeString(s: String) {
             '\n' -> "\\n"
             '\r' -> "\\r"
             '\t' -> "\\t"
-            else -> c
-        })
-    }
-    append('\"')
-}
-
-private fun StringBuilder.serializePropertyValue(value: Any?) {
-    when(value) {
-        null -> append("null")
-        is String -> serializeString(value)
-        is Number, is Boolean -> append(value.toString())
-        is List<*> -> serializeArray(value as List<Any>)
-        else -> serializeObject(value)
-    }
-}
-
-private fun StringBuilder.serializeArray(data: List<Any>) {
-    append("[")
-    appendCommaSeparated(data) {
-        serializePropertyValue(it)
-    }
-    append("]")
-
-}
+            else -> this
+        }

@@ -8,7 +8,7 @@ import ru.yole.jkid.serialization.serialize
 import java.text.SimpleDateFormat
 import java.util.*
 
-class DateSerializer : ValueSerializer<Date> {
+object DateSerializer : ValueSerializer<Date> {
     private val dateFormat = SimpleDateFormat("dd-mm-yyyy")
 
     override fun toJsonValue(value: Date): Any? =

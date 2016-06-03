@@ -10,9 +10,10 @@ inline fun <reified T> KAnnotatedElement.findAnnotation(): T?
         = annotations.filterIsInstance<T>().firstOrNull()
 
 internal fun <T : Any> KClass<T>.newInstance(): T {
-    val noArgConstructor = constructors.singleOrNull {
+    val noArgConstructor = constructors.find {
         it.parameters.isEmpty()
-    } ?: throw IllegalArgumentException(
+    }
+    noArgConstructor ?: throw IllegalArgumentException(
             "Class must have a no-argument constructor")
 
     return noArgConstructor.call()
@@ -25,13 +26,11 @@ fun Type.asJavaClass(): Class<Any> = when(this) {
     else -> throw UnsupportedOperationException("Unknown type $this")
 }
 
-internal fun <T> StringBuilder.appendCommaSeparated(
-        items: Collection<T>,
-        callback: (T) -> Unit) {
-
-    for ((i, item) in items.withIndex()) {
-        if (i > 0) append(", ")
-        callback(item)
+fun <T> Iterable<T>.joinToStringBuilder(stringBuilder: StringBuilder, separator: CharSequence = ", ", prefix: CharSequence = "", postfix: CharSequence = "", limit: Int = -1, truncated: CharSequence = "...", callback: ((T) -> Unit)? = null): StringBuilder {
+    return joinTo(stringBuilder, separator, prefix, postfix, limit, truncated) {
+        if (callback == null) return@joinTo  it.toString()
+        callback(it)
+        ""
     }
 }
 
