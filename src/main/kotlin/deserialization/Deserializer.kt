@@ -9,7 +9,6 @@ import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.jvm.javaType
-import kotlin.reflect.primaryConstructor
 
 inline fun <reified T: Any> deserialize(json: String): T {
     return deserialize(StringReader(json))
@@ -21,8 +20,8 @@ inline fun <reified T: Any> deserialize(json: Reader): T {
 
 fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
     val seed = ObjectSeed(targetClass, ConstructorInfoCache())
-    var currentCompositeSeed: Seed = seed
-    val seedStack = Stack<Seed>()
+    var currentCompositeSeed: CompositeSeed = seed
+    val seedStack = Stack<CompositeSeed>()
 
     val callback = object : JsonParseCallback {
         override fun enterObject(propertyName: String) {
@@ -31,7 +30,6 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
         }
 
         override fun leaveObject() {
-            currentCompositeSeed.spawn()
             currentCompositeSeed = seedStack.pop()
         }
 
@@ -53,23 +51,18 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
 }
 
 interface Seed {
-    fun createSimpleSeed(propertyName: String, value: Any?): Seed
-    fun createCompositeSeed(propertyName: String): Seed
     fun spawn(): Any?
 }
 
 class SimpleValueSeed(val value: Any?): Seed {
-
-    private fun error(): Nothing = throw IllegalStateException("Simple value seed can't contain inner values")
-
-    override fun createSimpleSeed(propertyName: String, value: Any?) = error()
-    override fun createCompositeSeed(propertyName: String) = error()
-
     override fun spawn() = value
 }
 
 abstract class CompositeSeed(val constructorInfoCache: ConstructorInfoCache): Seed {
-    protected fun createSeedForType(paramType: Type): Seed {
+    abstract fun createSimpleSeed(propertyName: String, value: Any?)
+    abstract fun createCompositeSeed(propertyName: String): CompositeSeed
+
+    protected fun createSeedForType(paramType: Type): CompositeSeed {
         val paramClass = paramType.asJavaClass()
 
         if (Collection::class.java.isAssignableFrom(paramClass)) {
@@ -92,16 +85,16 @@ class ObjectSeed<out T: Any>(
     private val constructorInfo = constructorInfoCache[targetClass]
 
     private val arguments = mutableMapOf<KParameter, Seed>()
-    private fun Seed.record(param: KParameter) = apply { arguments[param] = this }
 
-    override fun createSimpleSeed(propertyName: String, value: Any?): Seed {
+    override fun createSimpleSeed(propertyName: String, value: Any?) {
         val param = constructorInfo[propertyName]
-        return SimpleValueSeed(constructorInfo.deserializeValue(value, param)).record(param)
+        val seed = SimpleValueSeed(constructorInfo.deserializeValue(value, param))
+        arguments[param] = seed
     }
 
-    override fun createCompositeSeed(propertyName: String): Seed {
+    override fun createCompositeSeed(propertyName: String): CompositeSeed {
         val param = constructorInfo[propertyName]
-        return createSeedForType(param.type.javaType).record(param)
+        return createSeedForType(param.type.javaType).apply { arguments[param] = this }
     }
 
     override fun spawn(): T {
@@ -116,13 +109,14 @@ class CollectionSeed(
 ) : CompositeSeed(constructorInfoCache) {
 
     private val elements = mutableListOf<Seed>()
-    private fun Seed.record() = apply { elements.add(this) }
 
-    override fun createSimpleSeed(propertyName: String, value: Any?) =
-        SimpleValueSeed(value).record()
+    override fun createSimpleSeed(propertyName: String, value: Any?) {
+        val seed = SimpleValueSeed(value)
+        elements.add(seed)
+    }
 
     override fun createCompositeSeed(propertyName: String) =
-        createSeedForType(elementType).record()
+        createSeedForType(elementType).apply { elements.add(this) }
 
     override fun spawn(): Collection<*> = elements.map { it.spawn() }
 }
