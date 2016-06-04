@@ -1,6 +1,6 @@
 package ru.yole.jkid
 
-import ru.yole.jkid.deserialization.SchemaMismatchException
+import ru.yole.jkid.deserialization.JKidException
 import java.lang.reflect.Type
 
 fun serializerForType(type: Type): ValueSerializer<out Any?>? =
@@ -15,7 +15,7 @@ fun serializerForType(type: Type): ValueSerializer<out Any?>? =
         }
 
 private fun Any?.expectNumber(): Number {
-    if (this !is Number) throw SchemaMismatchException("Number expected")
+    if (this !is Number) throw JKidException("Number expected")
     return this
 }
 
@@ -46,7 +46,7 @@ object FloatSerializer : ValueSerializer<Float> {
 
 object BooleanSerializer : ValueSerializer<Boolean> {
     override fun fromJsonValue(jsonValue: Any?): Boolean {
-        if (jsonValue !is Boolean) throw SchemaMismatchException("Boolean expected")
+        if (jsonValue !is Boolean) throw JKidException("Boolean expected")
         return jsonValue
     }
 

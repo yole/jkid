@@ -22,7 +22,7 @@ class ReflectionCache {
 
 class ConstructorInfo<T : Any>(cls: KClass<T>) {
     private val constructor = cls.primaryConstructor
-            ?: throw UnsupportedOperationException("Class ${cls.qualifiedName} doesn't have a primary constructor")
+            ?: throw JKidException("Class ${cls.qualifiedName} doesn't have a primary constructor")
     private val parameters: List<KParameter>
         get() = constructor.parameters
 
@@ -35,7 +35,7 @@ class ConstructorInfo<T : Any>(cls: KClass<T>) {
 
     private fun cacheDataForParameter(cls: KClass<*>, param: KParameter) {
         val paramName = param.name
-                ?: throw UnsupportedOperationException("Class ${cls.qualifiedName} has constructor parameter without name")
+                ?: throw JKidException("Class ${cls.qualifiedName} has constructor parameter without name")
 
         val property = cls.declaredMemberProperties.find { it.name == paramName } ?: return
         val name = property.findAnnotation<JsonName>()?.name ?: paramName
@@ -60,10 +60,10 @@ class ConstructorInfo<T : Any>(cls: KClass<T>) {
 
     private fun validateArgumentType(param: KParameter, value: Any?) {
         if (value == null && !param.type.isMarkedNullable) {
-            throw SchemaMismatchException("Received null value for non-null parameter ${param.name}")
+            throw JKidException("Received null value for non-null parameter ${param.name}")
         }
         if (value != null && value.javaClass != param.type.javaType) {
-            throw SchemaMismatchException("Type mismatch for parameter ${param.name}: " +
+            throw JKidException("Type mismatch for parameter ${param.name}: " +
                     "expected ${param.type.javaType}, found ${value.javaClass}")
         }
     }
@@ -76,8 +76,10 @@ class ConstructorInfo<T : Any>(cls: KClass<T>) {
     private fun ensureAllParametersPresent(arguments: Map<KParameter, Any?>) {
         for (param in parameters) {
             if (arguments[param] == null && !param.isOptional && !param.type.isMarkedNullable) {
-                throw SchemaMismatchException("Missing value for parameter ${param.name}")
+                throw JKidException("Missing value for parameter ${param.name}")
             }
         }
     }
 }
+
+class JKidException(message: String) : Exception(message)

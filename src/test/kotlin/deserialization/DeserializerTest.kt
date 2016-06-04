@@ -71,19 +71,19 @@ class DeserializerTest {
     }
 
     @Test fun testPropertyTypeMismatch() {
-        assertFailsWith<SchemaMismatchException> {
+        assertFailsWith<JKidException> {
             deserialize<SingleStringProp>("{\"s\": 1}")
         }
     }
 
     @Test fun testPropertyTypeMismatchNull() {
-        assertFailsWith<SchemaMismatchException> {
+        assertFailsWith<JKidException> {
             deserialize<SingleStringProp>("{\"s\": null}")
         }
     }
 
     @Test fun testMissingPropertyException() {
-        assertFailsWith<SchemaMismatchException> {
+        assertFailsWith<JKidException> {
             deserialize<SingleStringProp>("{}")
         }
     }
@@ -113,7 +113,7 @@ class NumberSerializer: ValueSerializer<Int> {
     override fun fromJsonValue(jsonValue: Any?): Int = when(jsonValue) {
         "ZERO" -> 0
         "ONE" -> 1
-        else -> throw SchemaMismatchException("Unexpected value $jsonValue")
+        else -> throw JKidException("Unexpected value $jsonValue")
     }
 
     override fun toJsonValue(value: Int): Any? = when(value) {

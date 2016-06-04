@@ -52,8 +52,6 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
     return seed.spawn()
 }
 
-class SchemaMismatchException(message: String) : Exception(message)
-
 interface Seed {
     fun createSimpleSeed(propertyName: String, value: Any?): Seed
     fun createCompositeSeed(propertyName: String): Seed
