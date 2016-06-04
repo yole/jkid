@@ -79,7 +79,7 @@ class DeadSeed : Seed {
 }
 
 abstract class CompositeSeed(val reflectionCache: ReflectionCache): Seed {
-    internal fun createSeedForType(paramType: Type): Seed {
+    protected fun createSeedForType(paramType: Type): Seed {
         val paramClass = paramType.asJavaClass()
 
         if (Collection::class.java.isAssignableFrom(paramClass)) {
@@ -99,57 +99,24 @@ class ObjectSeed<out T: Any>(
         reflectionCache: ReflectionCache
 ) : CompositeSeed(reflectionCache) {
 
-    private val constructor = targetClass.primaryConstructor
-            ?: throw UnsupportedOperationException(
-                "Only classes with primary constructor can be deserialized")
-
-    private val constructorParameterCache = reflectionCache[targetClass]
+    private val constructorInfo = reflectionCache[targetClass]
 
     private val arguments = mutableMapOf<KParameter, Seed>()
     private fun Seed.record(param: KParameter) = apply { arguments[param] = this }
 
     override fun createSimpleSeed(propertyName: String, value: Any?): Seed {
-        val param = constructorParameterCache.findParameter(propertyName) ?: return DeadSeed()
-        return SimpleValueSeed(deserializeValue(value, param)).record(param)
+        val param = constructorInfo[propertyName] ?: return DeadSeed()
+        return SimpleValueSeed(constructorInfo.deserializeValue(value, param)).record(param)
     }
 
     override fun createCompositeSeed(propertyName: String): Seed {
-        val param = constructorParameterCache.findParameter(propertyName) ?: return DeadSeed()
+        val param = constructorInfo[propertyName] ?: return DeadSeed()
         return createSeedForType(param.type.javaType).record(param)
-    }
-
-    private fun deserializeValue(value: Any?, param: KParameter): Any? {
-        val serializer = constructorParameterCache.valueSerializerFor(param)
-        if (serializer != null) {
-            return serializer.fromJsonValue(value)
-        }
-
-        validateArgumentType(param, value)
-        return value
-    }
-
-    private fun validateArgumentType(param: KParameter, value: Any?) {
-        if (value == null && !param.type.isMarkedNullable) {
-            throw SchemaMismatchException("Received null value for non-null parameter ${param.name}")
-        }
-        if (value != null && value.javaClass != param.type.javaType) {
-            throw SchemaMismatchException("Type mismatch for parameter ${param.name}: " +
-                    "expected ${param.type.javaType}, found ${value.javaClass}")
-        }
-    }
-
-    private fun ensureAllParametersPresent(arguments: Map<KParameter, Any?>) {
-        for (param in constructor.parameters) {
-            if (arguments[param] == null && !param.isOptional && !param.type.isMarkedNullable) {
-                throw SchemaMismatchException("Missing value for parameter ${param.name}")
-            }
-        }
     }
 
     override fun spawn(): T {
         val argumentValues = arguments.mapValues { it.value.spawn() }
-        ensureAllParametersPresent(argumentValues)
-        return constructor.callBy(argumentValues)
+        return constructorInfo.callBy(argumentValues)
     }
 }
 

@@ -1,6 +1,5 @@
 package ru.yole.jkid
 
-import ru.yole.jkid.deserialization.SchemaMismatchException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import kotlin.reflect.KAnnotatedElement
@@ -32,9 +31,4 @@ fun <T> Iterable<T>.joinToStringBuilder(stringBuilder: StringBuilder, separator:
         callback(it)
         ""
     }
-}
-
-internal fun Any?.expectNumber(): Number {
-    if (this !is Number) throw SchemaMismatchException("Number expected")
-    return this
 }

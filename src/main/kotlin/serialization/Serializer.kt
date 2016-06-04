@@ -36,7 +36,7 @@ private fun StringBuilder.serializeProperty(
     append(": ")
 
     val value = prop.get(obj)
-    val jsonValue = prop.getSerializer() ?.toJsonValue(value) ?: value
+    val jsonValue = prop.getSerializer()?.toJsonValue(value) ?: value
     serializePropertyValue(jsonValue)
 }
 
