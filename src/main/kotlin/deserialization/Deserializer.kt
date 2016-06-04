@@ -84,21 +84,21 @@ class ObjectSeed<out T: Any>(
 
     private val constructorInfo = constructorInfoCache[targetClass]
 
-    private val arguments = mutableMapOf<KParameter, Seed>()
+    private val valueArguments = mutableMapOf<KParameter, Any?>()
+    private val seedArguments = mutableMapOf<KParameter, CompositeSeed>()
 
     override fun createSimpleSeed(propertyName: String, value: Any?) {
         val param = constructorInfo[propertyName]
-        val seed = SimpleValueSeed(constructorInfo.deserializeValue(value, param))
-        arguments[param] = seed
+        valueArguments[param] = constructorInfo.deserializeValue(value, param)
     }
 
     override fun createCompositeSeed(propertyName: String): CompositeSeed {
         val param = constructorInfo[propertyName]
-        return createSeedForType(param.type.javaType).apply { arguments[param] = this }
+        return createSeedForType(param.type.javaType).apply { seedArguments[param] = this }
     }
 
     override fun spawn(): T {
-        val argumentValues = arguments.mapValues { it.value.spawn() }
+        val argumentValues = valueArguments + seedArguments.mapValues { it.value.spawn() }
         return constructorInfo.callBy(argumentValues)
     }
 }
