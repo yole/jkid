@@ -14,35 +14,27 @@ class ConstructorParameterCache(cls: KClass<*>) {
     private val paramToSerializerMap = hashMapOf<KParameter, ValueSerializer<out Any?>>()
 
     init {
-        val constructor = cls.primaryConstructor
-        if (constructor != null) {
-            for (param in constructor.parameters) {
-                cacheDataForParameter(cls, param)
-            }
-        }
+        cls.primaryConstructor?.parameters?.forEach {
+            cacheDataForParameter(cls, it)
+        } ?: throw UnsupportedOperationException("Class ${cls.qualifiedName} doesn't have a primary constructor")
     }
 
     private fun cacheDataForParameter(cls: KClass<*>, param: KParameter) {
         val paramName = param.name
-                ?: throw UnsupportedOperationException(
-                    "Class has constructor parameter without name")
+                ?: throw UnsupportedOperationException("Class ${cls.qualifiedName} has constructor parameter without name")
 
-        val prop = cls.declaredMemberProperties.find {
-            it.name == paramName
-        }
-        if (prop != null) {
-            val jsonName = prop.findAnnotation<JsonName>()
-            jsonNameToParamMap[jsonName?.name ?: paramName] = param
+        val property = cls.declaredMemberProperties.find { it.name == paramName } ?: return
+        val name = property.findAnnotation<JsonName>()?.name ?: paramName
+        jsonNameToParamMap[name] = param
 
-            val valueSerializer = prop.getSerializer()
-                    ?: serializerForType(param.type.javaType)
-            if (valueSerializer != null) {
-                paramToSerializerMap[param] = valueSerializer
-            }
-        }
+        val valueSerializer = property.getSerializer()
+                ?: serializerForType(param.type.javaType)
+                ?: return
+        paramToSerializerMap[param] = valueSerializer
     }
 
     fun findParameter(jsonName: String): KParameter? = jsonNameToParamMap[jsonName]
+
     fun valueSerializerFor(param: KParameter): ValueSerializer<out Any?>? = paramToSerializerMap[param]
 }
 
