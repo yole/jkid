@@ -20,17 +20,17 @@ inline fun <reified T: Any> deserialize(json: Reader): T {
 
 fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
     val seed = ObjectSeed(targetClass, ConstructorInfoCache())
-    var currentCompositeSeed: CompositeSeed = seed
-    val seedStack = Stack<CompositeSeed>()
+    val stack = Stack<CompositeSeed>()
+    stack.push(seed)
 
     val callback = object : JsonParseCallback {
         override fun enterObject(propertyName: String) {
-            seedStack.push(currentCompositeSeed)
-            currentCompositeSeed = currentCompositeSeed.createCompositeSeed(propertyName)
+            val compositeSeed = stack.peek().createCompositeSeed(propertyName)
+            stack.push(compositeSeed)
         }
 
         override fun leaveObject() {
-            currentCompositeSeed = seedStack.pop()
+            stack.pop()
         }
 
         override fun enterArray(propertyName: String) {
@@ -42,7 +42,7 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
         }
 
         override fun visitValue(propertyName: String, value: Any?) {
-            currentCompositeSeed.createSimpleSeed(propertyName, value)
+            stack.peek().createSimpleSeed(propertyName, value)
         }
     }
     val parser = Parser(json, callback)
