@@ -36,10 +36,3 @@ object BooleanSerializer : ValueSerializer<Boolean> {
 
     override fun toJsonValue(value: Boolean) = value
 }
-
-object TimestampSerializer : ValueSerializer<Date> {
-    override fun toJsonValue(value: Date): Any? = value.time
-
-    override fun fromJsonValue(jsonValue: Any?): Date
-        = Date((jsonValue as Number).toLong())
-}
