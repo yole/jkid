@@ -68,14 +68,6 @@ class SimpleValueSeed(val value: Any?): Seed {
     override fun spawn() = value
 }
 
-class DeadSeed : Seed {
-    private fun error(): Nothing = throw IllegalStateException("Dead seed can't contain inner values or spawn")
-
-    override fun createSimpleSeed(propertyName: String, value: Any?) = error()
-    override fun createCompositeSeed(propertyName: String) = error()
-    override fun spawn() = error()
-}
-
 abstract class CompositeSeed(val reflectionCache: ReflectionCache): Seed {
     protected fun createSeedForType(paramType: Type): Seed {
         val paramClass = paramType.asJavaClass()
@@ -103,12 +95,12 @@ class ObjectSeed<out T: Any>(
     private fun Seed.record(param: KParameter) = apply { arguments[param] = this }
 
     override fun createSimpleSeed(propertyName: String, value: Any?): Seed {
-        val param = constructorInfo[propertyName] ?: return DeadSeed()
+        val param = constructorInfo[propertyName]
         return SimpleValueSeed(constructorInfo.deserializeValue(value, param)).record(param)
     }
 
     override fun createCompositeSeed(propertyName: String): Seed {
-        val param = constructorInfo[propertyName] ?: return DeadSeed()
+        val param = constructorInfo[propertyName]
         return createSeedForType(param.type.javaType).record(param)
     }
 

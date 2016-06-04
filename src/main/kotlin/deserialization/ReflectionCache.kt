@@ -21,6 +21,7 @@ class ReflectionCache {
 }
 
 class ConstructorInfo<T : Any>(cls: KClass<T>) {
+    private val className = cls.qualifiedName
     private val constructor = cls.primaryConstructor
             ?: throw JKidException("Class ${cls.qualifiedName} doesn't have a primary constructor")
     private val parameters: List<KParameter>
@@ -35,7 +36,7 @@ class ConstructorInfo<T : Any>(cls: KClass<T>) {
 
     private fun cacheDataForParameter(cls: KClass<*>, param: KParameter) {
         val paramName = param.name
-                ?: throw JKidException("Class ${cls.qualifiedName} has constructor parameter without name")
+                ?: throw JKidException("Class $className has constructor parameter without name")
 
         val property = cls.declaredMemberProperties.find { it.name == paramName } ?: return
         val name = property.findAnnotation<JsonName>()?.name ?: paramName
@@ -47,7 +48,8 @@ class ConstructorInfo<T : Any>(cls: KClass<T>) {
         paramToSerializerMap[param] = valueSerializer
     }
 
-    operator fun get(jsonName: String): KParameter? = jsonNameToParamMap[jsonName]
+    operator fun get(propertyName: String): KParameter = jsonNameToParamMap[propertyName]
+            ?: throw JKidException("Constructor parameter $propertyName is not found for class $className")
 
     fun deserializeValue(value: Any?, param: KParameter): Any? {
         val serializer = paramToSerializerMap[param]
