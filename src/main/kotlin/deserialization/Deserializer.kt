@@ -20,7 +20,7 @@ inline fun <reified T: Any> deserialize(json: Reader): T {
 }
 
 fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
-    val seed = ObjectSeed(targetClass, ReflectionCache())
+    val seed = ObjectSeed(targetClass, ConstructorInfoCache())
     var currentCompositeSeed: Seed = seed
     val seedStack = Stack<Seed>()
 
@@ -68,7 +68,7 @@ class SimpleValueSeed(val value: Any?): Seed {
     override fun spawn() = value
 }
 
-abstract class CompositeSeed(val reflectionCache: ReflectionCache): Seed {
+abstract class CompositeSeed(val constructorInfoCache: ConstructorInfoCache): Seed {
     protected fun createSeedForType(paramType: Type): Seed {
         val paramClass = paramType.asJavaClass()
 
@@ -78,18 +78,18 @@ abstract class CompositeSeed(val reflectionCache: ReflectionCache): Seed {
                         "Unsupported parameter type $this")
 
             val elementType = parameterizedType.actualTypeArguments.single()
-            return CollectionSeed(elementType, reflectionCache)
+            return CollectionSeed(elementType, constructorInfoCache)
         }
-        return ObjectSeed(paramClass.kotlin, reflectionCache)
+        return ObjectSeed(paramClass.kotlin, constructorInfoCache)
     }
 }
 
 class ObjectSeed<out T: Any>(
         targetClass: KClass<T>,
-        reflectionCache: ReflectionCache
-) : CompositeSeed(reflectionCache) {
+        constructorInfoCache: ConstructorInfoCache
+) : CompositeSeed(constructorInfoCache) {
 
-    private val constructorInfo = reflectionCache[targetClass]
+    private val constructorInfo = constructorInfoCache[targetClass]
 
     private val arguments = mutableMapOf<KParameter, Seed>()
     private fun Seed.record(param: KParameter) = apply { arguments[param] = this }
@@ -112,8 +112,8 @@ class ObjectSeed<out T: Any>(
 
 class CollectionSeed(
         val elementType: Type,
-        reflectionCache: ReflectionCache
-) : CompositeSeed(reflectionCache) {
+        constructorInfoCache: ConstructorInfoCache
+) : CompositeSeed(constructorInfoCache) {
 
     private val elements = mutableListOf<Seed>()
     private fun Seed.record() = apply { elements.add(this) }

@@ -11,9 +11,8 @@ import kotlin.reflect.declaredMemberProperties
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.primaryConstructor
 
-class ReflectionCache {
-    private val cacheData =
-            mutableMapOf<KClass<*>, ConstructorInfo<*>>()
+class ConstructorInfoCache {
+    private val cacheData = mutableMapOf<KClass<*>, ConstructorInfo<*>>()
 
     @Suppress("UNCHECKED_CAST")
     operator fun <T : Any> get(cls: KClass<T>): ConstructorInfo<T> =
