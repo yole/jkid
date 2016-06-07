@@ -11,15 +11,15 @@ import kotlin.reflect.declaredMemberProperties
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.primaryConstructor
 
-class ConstructorInfoCache {
-    private val cacheData = mutableMapOf<KClass<*>, ConstructorInfo<*>>()
+class ClassInfoCache {
+    private val cacheData = mutableMapOf<KClass<*>, ClassInfo<*>>()
 
     @Suppress("UNCHECKED_CAST")
-    operator fun <T : Any> get(cls: KClass<T>): ConstructorInfo<T> =
-            cacheData.getOrPut(cls) { ConstructorInfo(cls) } as ConstructorInfo<T>
+    operator fun <T : Any> get(cls: KClass<T>): ClassInfo<T> =
+            cacheData.getOrPut(cls) { ClassInfo(cls) } as ClassInfo<T>
 }
 
-class ConstructorInfo<T : Any>(cls: KClass<T>) {
+class ClassInfo<T : Any>(cls: KClass<T>) {
     private val className = cls.qualifiedName
     private val constructor = cls.primaryConstructor
             ?: throw JKidException("Class ${cls.qualifiedName} doesn't have a primary constructor")
@@ -47,10 +47,10 @@ class ConstructorInfo<T : Any>(cls: KClass<T>) {
         paramToSerializerMap[param] = valueSerializer
     }
 
-    operator fun get(propertyName: String): KParameter = jsonNameToParamMap[propertyName]
+    fun getConstructorParameter(propertyName: String): KParameter = jsonNameToParamMap[propertyName]
             ?: throw JKidException("Constructor parameter $propertyName is not found for class $className")
 
-    fun deserializeValue(value: Any?, param: KParameter): Any? {
+    fun deserializeConstructorArgument(param: KParameter, value: Any?): Any? {
         val serializer = paramToSerializerMap[param]
         if (serializer != null) {
             return serializer.fromJsonValue(value)
@@ -69,7 +69,7 @@ class ConstructorInfo<T : Any>(cls: KClass<T>) {
         }
     }
 
-    fun callBy(arguments: Map<KParameter, Any?>): T {
+    fun newInstance(arguments: Map<KParameter, Any?>): T {
         ensureAllParametersPresent(arguments)
         return constructor.callBy(arguments)
     }
