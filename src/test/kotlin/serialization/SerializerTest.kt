@@ -25,9 +25,14 @@ class SerializerTest {
         assertEquals("""{"o": {"s": "x"}}""", result)
     }
 
-    @Test fun testArray() {
+    @Test fun testList() {
         val result = serialize(SingleListProp(listOf("a", "b")))
         assertEquals("""{"o": ["a", "b"]}""", result)
+    }
+
+    @Test fun testListOfNull() {
+        val result = serialize(SingleListProp(listOf(null, "b")))
+        assertEquals("""{"o": [null, "b"]}""", result)
     }
 
     @Test fun testJsonName() {

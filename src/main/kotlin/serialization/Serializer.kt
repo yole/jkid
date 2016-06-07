@@ -54,12 +54,12 @@ private fun StringBuilder.serializePropertyValue(value: Any?) {
         null -> append("null")
         is String -> serializeString(value)
         is Number, is Boolean -> append(value.toString())
-        is List<*> -> serializeCollection(value as List<Any>)
+        is List<*> -> serializeCollection(value)
         else -> serializeObject(value)
     }
 }
 
-private fun StringBuilder.serializeCollection(data: List<Any>) {
+private fun StringBuilder.serializeCollection(data: List<Any?>) {
     data.joinToStringBuilder(this, prefix = "[", postfix = "]") {
         serializePropertyValue(it)
     }

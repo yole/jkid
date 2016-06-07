@@ -38,13 +38,19 @@ class DeserializerTest {
         assertEquals("x", result.o.s)
     }
 
-    @Test fun testArray() {
+    @Test fun testList() {
         val result = deserialize<SingleListProp>("""{"o": ["a", "b"]}""")
         assertEquals(2, result.o.size)
         assertEquals("b", result.o[1])
     }
 
-    @Test fun testObjectArray() {
+    @Test fun testNullableList() {
+        val result = deserialize<SingleListProp>("""{"o": [null, "b"]}""")
+        assertEquals(2, result.o.size)
+        assertEquals(null, result.o.first())
+    }
+
+    @Test fun testObjectList() {
         val result = deserialize<SingleObjectListProp>("""{"o": [{"s": "a"}, {"s": "b"}]}""")
         assertEquals(2, result.o.size)
         assertEquals("b", result.o[1].s)
@@ -99,7 +105,7 @@ data class TwoBoolProp(val b1: Boolean, val b2: Boolean)
 
 data class SingleObjectProp(val o: SingleStringProp)
 
-data class SingleListProp(val o: List<String>)
+data class SingleListProp(val o: List<String?>)
 
 data class SingleObjectListProp(val o: List<SingleStringProp>)
 
