@@ -12,8 +12,7 @@ private fun StringBuilder.serializeObjectWithoutAnnotation(obj: Any) {
     val kClass = obj.javaClass.kotlin
     val properties = kClass.memberProperties
 
-    properties.joinToStringBuilder(this, prefix = "{", postfix = "}") {
-        prop ->
+    properties.joinToStringBuilder(this, prefix = "{", postfix = "}") { prop ->
         serializeString(prop.name)
         append(": ")
         serializePropertyValue(prop.get(obj))
