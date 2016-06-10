@@ -23,14 +23,12 @@ class ClassInfo<T : Any>(cls: KClass<T>) {
     private val className = cls.qualifiedName
     private val constructor = cls.primaryConstructor
             ?: throw JKidException("Class ${cls.qualifiedName} doesn't have a primary constructor")
-    private val parameters: List<KParameter>
-        get() = constructor.parameters
 
     private val jsonNameToParamMap = hashMapOf<String, KParameter>()
     private val paramToSerializerMap = hashMapOf<KParameter, ValueSerializer<out Any?>>()
 
     init {
-        parameters.forEach { cacheDataForParameter(cls, it) }
+        constructor.parameters.forEach { cacheDataForParameter(cls, it) }
     }
 
     private fun cacheDataForParameter(cls: KClass<*>, param: KParameter) {
@@ -52,9 +50,8 @@ class ClassInfo<T : Any>(cls: KClass<T>) {
 
     fun deserializeConstructorArgument(param: KParameter, value: Any?): Any? {
         val serializer = paramToSerializerMap[param]
-        if (serializer != null) {
-            return serializer.fromJsonValue(value)
-        }
+        if (serializer != null) return serializer.fromJsonValue(value)
+
         validateArgumentType(param, value)
         return value
     }
@@ -75,7 +72,7 @@ class ClassInfo<T : Any>(cls: KClass<T>) {
     }
 
     private fun ensureAllParametersPresent(arguments: Map<KParameter, Any?>) {
-        for (param in parameters) {
+        for (param in constructor.parameters) {
             if (arguments[param] == null && !param.isOptional && !param.type.isMarkedNullable) {
                 throw JKidException("Missing value for parameter ${param.name}")
             }
