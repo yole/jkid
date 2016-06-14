@@ -46,11 +46,11 @@ class LexerTest {
     }
 
     @Test fun testInt() {
-        verifyTokens("0", Token.IntValue(0))
+        verifyTokens("0", Token.LongValue(0))
     }
 
     @Test fun testNegativeInt() {
-        verifyTokens("-1", Token.IntValue(-1))
+        verifyTokens("-1", Token.LongValue(-1))
     }
 
     @Test fun testDouble() {

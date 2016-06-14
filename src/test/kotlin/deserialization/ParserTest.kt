@@ -14,7 +14,7 @@ class ParserTest {
     @Test fun testTwoProperties() {
         verifyParse("""{"s": "x", "f": 1}""",
                 VisitValue("s", "x"),
-                VisitValue("f", 1))
+                VisitValue("f", 1L))
     }
 
     @Test fun testMissingComma() {
@@ -24,15 +24,15 @@ class ParserTest {
     @Test fun testNestedObject() {
         verifyParse("""{"s": {"x": 1}}""",
                 EnterObject("s"),
-                VisitValue("x", 1),
+                VisitValue("x", 1L),
                 LeaveObject)
     }
 
     @Test fun testArray() {
         verifyParse("""{"s": [1, 2]}""",
                 EnterArray("s"),
-                VisitValue("s", 1),
-                VisitValue("s", 2),
+                VisitValue("s", 1L),
+                VisitValue("s", 2L),
                 LeaveArray)
     }
 
@@ -40,10 +40,10 @@ class ParserTest {
         verifyParse("""{"s": [{"x": 1}, {"x": 2}]}""",
                 EnterArray("s"),
                 EnterObject("s"),
-                VisitValue("x", 1),
+                VisitValue("x", 1L),
                 LeaveObject,
                 EnterObject("s"),
-                VisitValue("x", 2),
+                VisitValue("x", 2L),
                 LeaveObject,
                 LeaveArray)
     }
