@@ -58,6 +58,13 @@ fun Seed.createSeedForType(paramType: Type, isList: Boolean): Seed {
         return ObjectListSeed(elementType, classInfoCache)
     }
     if (isList) throw JKidException("Object of the type ${paramType.typeName} expected, not an array")
+    if (Map::class.java.isAssignableFrom(paramClass)) {
+        val parameterizedType = paramType as? ParameterizedType
+                ?: throw UnsupportedOperationException("Unsupported parameter type $this")
+
+        val elementType = parameterizedType.actualTypeArguments[1]
+        return MapSeed(elementType, classInfoCache)
+    }
     return ObjectSeed(paramClass.kotlin, classInfoCache)
 }
 
@@ -123,4 +130,19 @@ class ValueListSeed(
     }
 
     override fun spawn() = elements
+}
+
+class MapSeed(val elementType: Type, override val classInfoCache: ClassInfoCache) : Seed {
+    private val valueMap = mutableMapOf<String, Any?>()
+    private val seedMap = mutableMapOf<String, Seed>()
+
+    override fun setSimpleProperty(propertyName: String, value: Any?) {
+        valueMap[propertyName] = value
+    }
+
+    override fun createCompositeProperty(propertyName: String, isList: Boolean) =
+            createSeedForType(elementType, isList).apply { seedMap[propertyName] = this }
+
+    override fun spawn(): Map<String, Any?> =
+            valueMap + seedMap.mapValues { it.value.spawn() }
 }
