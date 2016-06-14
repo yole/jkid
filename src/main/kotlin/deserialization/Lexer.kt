@@ -21,7 +21,8 @@ interface Token {
 
     data class BoolValue(override val value: Boolean) : ValueToken
     data class StringValue(override val value: String) : ValueToken
-    data class NumberValue(override val value: Double) : ValueToken
+    data class IntValue(override val value: Int) : ValueToken
+    data class DoubleValue(override val value: Double) : ValueToken
 
     companion object {
         val TRUE = BoolValue(true)
@@ -147,6 +148,7 @@ class Lexer(reader: Reader) {
             if (c == null || c in valueEndChars) break
             buffer.append(charReader.readNext())
         }
-        return Token.NumberValue(java.lang.Double.parseDouble(buffer.toString()))
+        val value = buffer.toString()
+        return if (value.contains(".")) Token.DoubleValue(value.toDouble()) else Token.IntValue(value.toInt())
     }
 }

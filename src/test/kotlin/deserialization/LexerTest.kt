@@ -45,12 +45,20 @@ class LexerTest {
         verifyTokens("\"abc\"", Token.StringValue("abc"))
     }
 
+    @Test fun testInt() {
+        verifyTokens("0", Token.IntValue(0))
+    }
+
+    @Test fun testNegativeInt() {
+        verifyTokens("-1", Token.IntValue(-1))
+    }
+
     @Test fun testDouble() {
-        verifyTokens("0", Token.NumberValue(0.0))
+        verifyTokens("0.0", Token.DoubleValue(0.0))
     }
 
     @Test fun testNegativeDouble() {
-        verifyTokens("-1", Token.NumberValue(-1.0))
+        verifyTokens("-1.0", Token.DoubleValue(-1.0))
     }
 
     private fun verifyTokens(text: String, vararg tokens: Token) {
