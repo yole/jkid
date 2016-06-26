@@ -16,7 +16,7 @@ The first exercise can be started after reading the description of the serialize
 The second exercise is intended to be started after reading the whole chapter.
 Solving these exercises will help you to understand the concepts better and lets you practice right away.
 
-1. Support the annotation `DateFormat`, that allows to annotate the date property with `@DateFormat("dd-mm-yyyy")` specifying the date format as an argument.
+1. Support the annotation `DateFormat`, that allows to annotate the date property with `@DateFormat("dd-MM-yyyy")` specifying the date format as an argument.
 The testing example showing its usage is in the file `test/kotlin/exercise/DataFormatAnnotation.kt`.
 Remove `@Ignore` from the test `DateFormatTest` and make it pass.
 The declaration of the annotation is in the file `main/kotlin/exercise/DateFormat.kt`.
