@@ -66,7 +66,7 @@ class ClassInfo<T : Any>(cls: KClass<T>) {
         }
     }
 
-    fun newInstance(arguments: Map<KParameter, Any?>): T {
+    fun createInstance(arguments: Map<KParameter, Any?>): T {
         ensureAllParametersPresent(arguments)
         return constructor.callBy(arguments)
     }

@@ -8,7 +8,7 @@ import kotlin.reflect.KClass
 inline fun <reified T> KAnnotatedElement.findAnnotation(): T?
         = annotations.filterIsInstance<T>().firstOrNull()
 
-internal fun <T : Any> KClass<T>.newInstance(): T {
+internal fun <T : Any> KClass<T>.createInstance(): T {
     val noArgConstructor = constructors.find {
         it.parameters.isEmpty()
     }

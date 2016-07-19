@@ -102,7 +102,7 @@ class ObjectSeed<out T: Any>(
         return createSeedForType(param.type.javaType).apply { seedArguments[param] = this }
     }
 
-    override fun spawn(): T = classInfo.newInstance(arguments)
+    override fun spawn(): T = classInfo.createInstance(arguments)
 }
 
 class ObjectCollectionSeed(

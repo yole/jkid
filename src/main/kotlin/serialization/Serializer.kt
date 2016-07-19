@@ -44,7 +44,7 @@ fun KProperty<*>.getSerializer(): ValueSerializer<Any?>? {
     val serializerClass = jsonSerializerAnn.serializerClass
 
     val valueSerializer = serializerClass.objectInstance
-            ?: serializerClass.newInstance()
+            ?: serializerClass.createInstance()
     @Suppress("UNCHECKED_CAST")
     return valueSerializer as ValueSerializer<Any?>
 }
