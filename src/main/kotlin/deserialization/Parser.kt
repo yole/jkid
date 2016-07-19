@@ -3,8 +3,8 @@ package ru.yole.jkid.deserialization
 import java.io.Reader
 
 interface JsonParseCallback<T> {
-    fun createObject(obj: T, propertyName: String): T
-    fun createArray(obj: T, propertyName: String): T
+    fun createObject(parentObject: T, propertyName: String): T
+    fun createArray(parentObject: T, propertyName: String): T
     fun visitValue(obj: T, propertyName: String, value: Any?)
 }
 

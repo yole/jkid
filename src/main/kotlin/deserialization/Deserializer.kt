@@ -22,12 +22,12 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
     val seed = ObjectSeed(targetClass, ClassInfoCache())
 
     val callback = object : JsonParseCallback<Seed> {
-        override fun createObject(obj: Seed, propertyName: String): Seed {
-            return obj.createCompositeProperty(propertyName)
+        override fun createObject(parentObject: Seed, propertyName: String): Seed {
+            return parentObject.createCompositeProperty(propertyName)
         }
 
-        override fun createArray(obj: Seed, propertyName: String): Seed {
-            return obj.createCompositeProperty(propertyName)
+        override fun createArray(parentObject: Seed, propertyName: String): Seed {
+            return parentObject.createCompositeProperty(propertyName)
         }
 
         override fun visitValue(obj: Seed, propertyName: String, value: Any?) {

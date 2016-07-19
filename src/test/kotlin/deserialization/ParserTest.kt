@@ -68,13 +68,13 @@ class ParserTest {
         val calls = mutableListOf<JsonParseCallbackCall>()
         var lastObjectId: Int = 0
 
-        override fun createObject(obj: Int, propertyName: String): Int {
-            calls.add(CreateObject(obj, propertyName))
+        override fun createObject(parentObject: Int, propertyName: String): Int {
+            calls.add(CreateObject(parentObject, propertyName))
             return ++lastObjectId
         }
 
-        override fun createArray(obj: Int, propertyName: String): Int {
-            calls.add(CreateArray(obj, propertyName))
+        override fun createArray(parentObject: Int, propertyName: String): Int {
+            calls.add(CreateArray(parentObject, propertyName))
             return ++lastObjectId
         }
 
