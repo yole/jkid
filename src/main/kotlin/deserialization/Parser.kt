@@ -2,26 +2,24 @@ package ru.yole.jkid.deserialization
 
 import java.io.Reader
 
-interface JsonParseCallback {
-    fun enterObject(propertyName: String)
-    fun leaveObject()
-    fun enterArray(propertyName: String)
-    fun leaveArray()
-    fun visitValue(propertyName: String, value: Any?)
+interface JsonParseCallback<T> {
+    fun createObject(obj: T, propertyName: String): T
+    fun createArray(obj: T, propertyName: String): T
+    fun visitValue(obj: T, propertyName: String, value: Any?)
 }
 
-class Parser(reader: Reader, val callback: JsonParseCallback) {
+class Parser<T>(reader: Reader, val root: T, val callback: JsonParseCallback<T>) {
     private val lexer = Lexer(reader)
 
     fun parse() {
         expect(Token.LBRACE)
-        parseObjectBody()
+        parseObjectBody(root)
         if (lexer.nextToken() != null) {
             throw IllegalArgumentException("Too many tokens")
         }
     }
 
-    private fun parseObjectBody() {
+    private fun parseObjectBody(obj: T) {
         parseCommaSeparated(Token.RBRACE) { token ->
             if (token !is Token.StringValue) {
                 throw MalformedJSONException("Unexpected token $token")
@@ -29,13 +27,13 @@ class Parser(reader: Reader, val callback: JsonParseCallback) {
 
             val propName = token.value
             expect(Token.COLON)
-            parsePropertyValue(propName, nextToken())
+            parsePropertyValue(obj, propName, nextToken())
         }
     }
 
-    private fun parseArrayBody(propName: String) {
+    private fun parseArrayBody(obj: T, propName: String) {
         parseCommaSeparated(Token.RBRACKET) { token ->
-            parsePropertyValue(propName, token)
+            parsePropertyValue(obj, propName, token)
         }
     }
 
@@ -55,21 +53,19 @@ class Parser(reader: Reader, val callback: JsonParseCallback) {
         }
     }
 
-    private fun parsePropertyValue(propName: String, token: Token) {
+    private fun parsePropertyValue(obj: T, propName: String, token: Token) {
         when (token) {
             is Token.ValueToken ->
-                callback.visitValue(propName, token.value)
+                callback.visitValue(obj, propName, token.value)
 
             Token.LBRACE -> {
-                callback.enterObject(propName)
-                parseObjectBody()
-                callback.leaveObject()
+                val childObj = callback.createObject(obj, propName)
+                parseObjectBody(childObj)
             }
 
             Token.LBRACKET -> {
-                callback.enterArray(propName)
-                parseArrayBody(propName)
-                callback.leaveArray()
+                val childObj = callback.createArray(obj, propName)
+                parseArrayBody(childObj, propName)
             }
 
             else ->

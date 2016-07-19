@@ -6,7 +6,6 @@ import java.io.Reader
 import java.io.StringReader
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.jvm.javaType
@@ -21,38 +20,25 @@ inline fun <reified T: Any> deserialize(json: Reader): T {
 
 fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
     val seed = ObjectSeed(targetClass, ClassInfoCache())
-    val stack = Stack<Seed>()
-    stack.push(seed)
 
-    val callback = object : JsonParseCallback {
-        override fun enterObject(propertyName: String) {
-            val compositeSeed = stack.peek().createCompositeProperty(propertyName)
-            stack.push(compositeSeed)
+    val callback = object : JsonParseCallback<Seed> {
+        override fun createObject(obj: Seed, propertyName: String): Seed {
+            return obj.createCompositeProperty(propertyName)
         }
 
-        override fun leaveObject() {
-            stack.pop()
+        override fun createArray(obj: Seed, propertyName: String): Seed {
+            return obj.createCompositeProperty(propertyName)
         }
 
-        override fun enterArray(propertyName: String) {
-            enterObject(propertyName)
-        }
-
-        override fun leaveArray() {
-            leaveObject()
-        }
-
-        override fun visitValue(propertyName: String, value: Any?) {
-            stack.peek().setSimpleProperty(propertyName, value)
+        override fun visitValue(obj: Seed, propertyName: String, value: Any?) {
+            obj.setSimpleProperty(propertyName, value)
         }
     }
-    Parser(json, callback).parse()
+    Parser(json, seed, callback).parse()
     return seed.spawn()
 }
 
-
 interface Seed {
-
     val classInfoCache: ClassInfoCache
 
     fun setSimpleProperty(propertyName: String, value: Any?)
