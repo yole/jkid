@@ -93,6 +93,11 @@ class DeserializerTest {
             deserialize<SingleStringProp>("{}")
         }
     }
+
+    @Test fun testListOfInts() {
+        val result = deserialize<ListOfInts>("""{"ints": [42]}""")
+        assertEquals(ListOfInts(listOf(42)), result)
+    }
 }
 
 data class SingleStringProp(val s: String)
@@ -110,6 +115,8 @@ data class SingleListProp(val o: List<String?>)
 data class SingleObjectListProp(val o: List<SingleStringProp>)
 
 data class SingleOptionalProp(val s: String = "foo")
+
+data class ListOfInts(val ints: List<Int>)
 
 data class SingleAnnotatedStringProp(@JsonName("q") val s: String)
 

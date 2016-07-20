@@ -33,7 +33,7 @@ fun <T> Iterable<T>.joinToStringBuilder(stringBuilder: StringBuilder, separator:
     }
 }
 
-fun Type.isPrimitive(): Boolean {
+fun Type.isPrimitiveOrString(): Boolean {
     val cls = this as? Class<Any> ?: return false
     return cls.kotlin.javaPrimitiveType != null || cls == String::class.java
 }

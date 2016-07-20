@@ -1,7 +1,8 @@
 package ru.yole.jkid.deserialization
 
 import ru.yole.jkid.asJavaClass
-import ru.yole.jkid.isPrimitive
+import ru.yole.jkid.isPrimitiveOrString
+import ru.yole.jkid.serializerForBasicType
 import java.io.Reader
 import java.io.StringReader
 import java.lang.reflect.ParameterizedType
@@ -56,8 +57,8 @@ fun Seed.createSeedForType(paramType: Type): Seed {
                 ?: throw UnsupportedOperationException("Unsupported parameter type $this")
 
         val elementType = parameterizedType.actualTypeArguments.single()
-        if (elementType.isPrimitive()) {
-            return ValueCollectionSeed(classInfoCache)
+        if (elementType.isPrimitiveOrString()) {
+            return ValueCollectionSeed(elementType, classInfoCache)
         }
         return ObjectCollectionSeed(elementType, classInfoCache)
     }
@@ -107,11 +108,15 @@ class ObjectCollectionSeed(
     override fun spawn(): Collection<*> = elements.map { it.spawn() }
 }
 
-class ValueCollectionSeed(override val classInfoCache: ClassInfoCache) : Seed {
+class ValueCollectionSeed(
+        elementType: Type,
+        override val classInfoCache: ClassInfoCache
+) : Seed {
     private val elements = mutableListOf<Any?>()
+    private val serializerForType = serializerForBasicType(elementType)
 
     override fun setSimpleProperty(propertyName: String, value: Any?) {
-        elements.add(value)
+        elements.add(serializerForType.fromJsonValue(value))
     }
 
     override fun createCompositeProperty(propertyName: String): Seed {
