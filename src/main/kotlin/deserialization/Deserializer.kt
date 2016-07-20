@@ -28,11 +28,19 @@ fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
 interface JsonObject {
     fun setSimpleProperty(propertyName: String, value: Any?)
 
-    fun createCompositeProperty(propertyName: String, isCollection: Boolean): JsonObject
+    fun createObject(propertyName: String): JsonObject
+
+    fun createArray(propertyName: String): JsonObject
 }
 
 interface Seed: JsonObject {
     val classInfoCache: ClassInfoCache
+
+    fun createCompositeProperty(propertyName: String, isCollection: Boolean): JsonObject
+
+    override fun createObject(propertyName: String) = createCompositeProperty(propertyName, false)
+
+    override fun createArray(propertyName: String) = createCompositeProperty(propertyName, true)
 
     fun spawn(): Any?
 }

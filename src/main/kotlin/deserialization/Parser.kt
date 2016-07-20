@@ -53,12 +53,12 @@ class Parser(reader: Reader, val rootObject: JsonObject) {
                 currentObject.setSimpleProperty(propName, token.value)
 
             Token.LBRACE -> {
-                val childObj = currentObject.createCompositeProperty(propName, isCollection = false)
+                val childObj = currentObject.createObject(propName)
                 parseObjectBody(childObj)
             }
 
             Token.LBRACKET -> {
-                val childObj = currentObject.createCompositeProperty(propName, isCollection = true)
+                val childObj = currentObject.createArray(propName)
                 parseArrayBody(childObj, propName)
             }
 

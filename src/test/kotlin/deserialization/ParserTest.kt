@@ -77,7 +77,11 @@ class ParserTest {
             reportingData.actions.add(VisitValue(id, propertyName, value))
         }
 
-        override fun createCompositeProperty(propertyName: String, isCollection: Boolean): JsonObject {
+        override fun createObject(propertyName: String) = createCompositeProperty(propertyName, false)
+
+        override fun createArray(propertyName: String) = createCompositeProperty(propertyName, true)
+
+        private fun createCompositeProperty(propertyName: String, isCollection: Boolean): JsonObject {
             reportingData.maxId++
             val newId = reportingData.maxId
             reportingData.actions.add(if (isCollection) CreateArray(newId, propertyName) else CreateObject(newId, propertyName))
