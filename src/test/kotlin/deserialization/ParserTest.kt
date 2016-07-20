@@ -1,7 +1,7 @@
 package ru.yole.jkid.deserialization
 
 import org.junit.Test
-import ru.yole.jkid.deserialization.ParserTest.JsonParseCallbackCall.*
+import ru.yole.jkid.deserialization.ParserTest.JsonParserAction.*
 import java.io.StringReader
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -23,63 +23,65 @@ class ParserTest {
 
     @Test fun testNestedObject() {
         verifyParse("""{"s": {"x": 1}}""",
-                CreateObject(0, "s"),
+                CreateObject(1, "s"),
                 VisitValue(1, "x", 1L))
     }
 
     @Test fun testArray() {
         verifyParse("""{"s": [1, 2]}""",
-                CreateArray(0, "s"),
+                CreateArray(1, "s"),
                 VisitValue(1, "s", 1L),
                 VisitValue(1, "s", 2L))
     }
 
     @Test fun testArrayOfObjects() {
         verifyParse("""{"s": [{"x": 1}, {"x": 2}]}""",
-                CreateArray(0, "s"),
-                CreateObject(1, "s"),
+                CreateArray(1, "s"),
+                CreateObject(2, "s"),
                 VisitValue(2, "x", 1L),
-                CreateObject(1, "s"),
+                CreateObject(3, "s"),
                 VisitValue(3, "x", 2L))
     }
 
-    private fun verifyParse(json: String, vararg expectedCallbackCalls: JsonParseCallbackCall) {
-        val reportingCallback = ReportingParseCallback()
-        Parser(StringReader(json), 0, reportingCallback).parse()
-        assertEquals(expectedCallbackCalls.size, reportingCallback.calls.size)
-        for ((expected, actual) in expectedCallbackCalls zip reportingCallback.calls) {
+    private fun verifyParse(json: String, vararg expectedCallbackCalls: JsonParserAction) {
+        val reportingObject = ReportingJsonObject(0)
+        Parser(StringReader(json), reportingObject).parse()
+        assertEquals(expectedCallbackCalls.size, reportingObject.actions.size)
+        for ((expected, actual) in expectedCallbackCalls zip reportingObject.actions) {
             assertEquals(expected, actual)
         }
     }
 
     private fun verifyMalformed(text: String) {
         assertFailsWith<MalformedJSONException> {
-            Parser(StringReader(text), 0, ReportingParseCallback()).parse()
+            Parser(StringReader(text), ReportingJsonObject(0)).parse()
         }
     }
 
-    interface JsonParseCallbackCall {
-        data class CreateObject(val objId: Int, val propertyName: String) : JsonParseCallbackCall
-        data class CreateArray(val objId: Int, val propertyName: String) : JsonParseCallbackCall
-        data class VisitValue(val objId: Int, val propertyName: String, val value: Any?) : JsonParseCallbackCall
+    interface JsonParserAction {
+        data class CreateObject(val objId: Int, val propertyName: String) : JsonParserAction
+        data class CreateArray(val objId: Int, val propertyName: String) : JsonParserAction
+        data class VisitValue(val objId: Int, val propertyName: String, val value: Any?) : JsonParserAction
     }
 
-    class ReportingParseCallback: JsonParseCallback<Int> {
-        val calls = mutableListOf<JsonParseCallbackCall>()
-        var lastObjectId: Int = 0
+    class ReportingData(var maxId: Int, val actions: MutableList<JsonParserAction> = mutableListOf())
 
-        override fun createObject(parentObject: Int, propertyName: String): Int {
-            calls.add(CreateObject(parentObject, propertyName))
-            return ++lastObjectId
+    class ReportingJsonObject(
+            val id: Int,
+            private val reportingData: ReportingData = ReportingData(0, mutableListOf())
+    ) : JsonObject {
+        val actions: List<JsonParserAction>
+            get() = reportingData.actions
+
+        override fun setSimpleProperty(propertyName: String, value: Any?) {
+            reportingData.actions.add(VisitValue(id, propertyName, value))
         }
 
-        override fun createArray(parentObject: Int, propertyName: String): Int {
-            calls.add(CreateArray(parentObject, propertyName))
-            return ++lastObjectId
-        }
-
-        override fun visitValue(obj: Int, propertyName: String, value: Any?) {
-            calls.add(VisitValue(obj, propertyName, value))
+        override fun createCompositeProperty(propertyName: String, isCollection: Boolean): JsonObject {
+            reportingData.maxId++
+            val newId = reportingData.maxId
+            reportingData.actions.add(if (isCollection) CreateArray(newId, propertyName) else CreateObject(newId, propertyName))
+            return ReportingJsonObject(newId, reportingData)
         }
     }
 }

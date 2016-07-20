@@ -2,24 +2,18 @@ package ru.yole.jkid.deserialization
 
 import java.io.Reader
 
-interface JsonParseCallback<T> {
-    fun createObject(parentObject: T, propertyName: String): T
-    fun createArray(parentObject: T, propertyName: String): T
-    fun visitValue(obj: T, propertyName: String, value: Any?)
-}
-
-class Parser<T>(reader: Reader, val root: T, val callback: JsonParseCallback<T>) {
+class Parser(reader: Reader, val rootObject: JsonObject) {
     private val lexer = Lexer(reader)
 
     fun parse() {
         expect(Token.LBRACE)
-        parseObjectBody(root)
+        parseObjectBody(rootObject)
         if (lexer.nextToken() != null) {
             throw IllegalArgumentException("Too many tokens")
         }
     }
 
-    private fun parseObjectBody(obj: T) {
+    private fun parseObjectBody(JsonObject: JsonObject) {
         parseCommaSeparated(Token.RBRACE) { token ->
             if (token !is Token.StringValue) {
                 throw MalformedJSONException("Unexpected token $token")
@@ -27,13 +21,13 @@ class Parser<T>(reader: Reader, val root: T, val callback: JsonParseCallback<T>)
 
             val propName = token.value
             expect(Token.COLON)
-            parsePropertyValue(obj, propName, nextToken())
+            parsePropertyValue(JsonObject, propName, nextToken())
         }
     }
 
-    private fun parseArrayBody(obj: T, propName: String) {
+    private fun parseArrayBody(currentObject: JsonObject, propName: String) {
         parseCommaSeparated(Token.RBRACKET) { token ->
-            parsePropertyValue(obj, propName, token)
+            parsePropertyValue(currentObject, propName, token)
         }
     }
 
@@ -53,18 +47,18 @@ class Parser<T>(reader: Reader, val root: T, val callback: JsonParseCallback<T>)
         }
     }
 
-    private fun parsePropertyValue(obj: T, propName: String, token: Token) {
+    private fun parsePropertyValue(currentObject: JsonObject, propName: String, token: Token) {
         when (token) {
             is Token.ValueToken ->
-                callback.visitValue(obj, propName, token.value)
+                currentObject.setSimpleProperty(propName, token.value)
 
             Token.LBRACE -> {
-                val childObj = callback.createObject(obj, propName)
+                val childObj = currentObject.createCompositeProperty(propName, isCollection = false)
                 parseObjectBody(childObj)
             }
 
             Token.LBRACKET -> {
-                val childObj = callback.createArray(obj, propName)
+                val childObj = currentObject.createCompositeProperty(propName, isCollection = true)
                 parseArrayBody(childObj, propName)
             }
 

@@ -21,30 +21,18 @@ inline fun <reified T: Any> deserialize(json: Reader): T {
 
 fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
     val seed = ObjectSeed(targetClass, ClassInfoCache())
-
-    val callback = object : JsonParseCallback<Seed> {
-        override fun createObject(parentObject: Seed, propertyName: String): Seed {
-            return parentObject.createCompositeProperty(propertyName, isCollection = false)
-        }
-
-        override fun createArray(parentObject: Seed, propertyName: String): Seed {
-            return parentObject.createCompositeProperty(propertyName, isCollection = true)
-        }
-
-        override fun visitValue(obj: Seed, propertyName: String, value: Any?) {
-            obj.setSimpleProperty(propertyName, value)
-        }
-    }
-    Parser(json, seed, callback).parse()
+    Parser(json, seed).parse()
     return seed.spawn()
 }
 
-interface Seed {
-    val classInfoCache: ClassInfoCache
-
+interface JsonObject {
     fun setSimpleProperty(propertyName: String, value: Any?)
 
-    fun createCompositeProperty(propertyName: String, isCollection: Boolean): Seed
+    fun createCompositeProperty(propertyName: String, isCollection: Boolean): JsonObject
+}
+
+interface Seed: JsonObject {
+    val classInfoCache: ClassInfoCache
 
     fun spawn(): Any?
 }
