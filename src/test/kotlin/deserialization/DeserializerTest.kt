@@ -98,6 +98,12 @@ class DeserializerTest {
         val result = deserialize<ListOfInts>("""{"ints": [42]}""")
         assertEquals(ListOfInts(listOf(42)), result)
     }
+
+    @Test fun testObjectForListOfInts() {
+        assertFailsWith<JKidException> {
+            deserialize<ListOfInts>("""{"ints": {"a": 42}}""")
+        }
+    }
 }
 
 data class SingleStringProp(val s: String)
