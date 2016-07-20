@@ -8,16 +8,15 @@ fun serializerForBasicType(type: Type): ValueSerializer<out Any?> {
     return serializerForType(type)!!
 }
 
-@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 fun serializerForType(type: Type): ValueSerializer<out Any?>? =
         when (type) {
-            Byte::class.java, java.lang.Byte::class.java -> ByteSerializer
-            Short::class.java, java.lang.Short::class.java -> ShortSerializer
-            Int::class.java, java.lang.Integer::class.java -> IntSerializer
-            Long::class.java, java.lang.Long::class.java -> LongSerializer
-            Float::class.java, java.lang.Float::class.java -> FloatSerializer
-            Double::class.java, java.lang.Double::class.java -> DoubleSerializer
-            Boolean::class.java, java.lang.Boolean::class.java -> BooleanSerializer
+            Byte::class.java, Byte::class.javaObjectType -> ByteSerializer
+            Short::class.java, Short::class.javaObjectType -> ShortSerializer
+            Int::class.java, Int::class.javaObjectType -> IntSerializer
+            Long::class.java, Long::class.javaObjectType -> LongSerializer
+            Float::class.java, Float::class.javaObjectType -> FloatSerializer
+            Double::class.java, Double::class.javaObjectType -> DoubleSerializer
+            Boolean::class.java, Boolean::class.javaObjectType -> BooleanSerializer
             String::class.java -> StringSerializer
             else -> null
         }
