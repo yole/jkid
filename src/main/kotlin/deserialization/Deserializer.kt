@@ -36,7 +36,7 @@ interface JsonObject {
 interface Seed: JsonObject {
     val classInfoCache: ClassInfoCache
 
-    fun createCompositeProperty(propertyName: String, isCollection: Boolean): JsonObject
+    fun createCompositeProperty(propertyName: String, isList: Boolean): JsonObject
 
     override fun createObject(propertyName: String) = createCompositeProperty(propertyName, false)
 
@@ -45,21 +45,21 @@ interface Seed: JsonObject {
     fun spawn(): Any?
 }
 
-fun Seed.createSeedForType(paramType: Type, isCollection: Boolean): Seed {
+fun Seed.createSeedForType(paramType: Type, isList: Boolean): Seed {
     val paramClass = paramType.asJavaClass()
 
-    if (Collection::class.java.isAssignableFrom(paramClass)) {
-        if (!isCollection) throw JKidException("An array expected, not a composite object")
+    if (List::class.java.isAssignableFrom(paramClass)) {
+        if (!isList) throw JKidException("An array expected, not a composite object")
         val parameterizedType = paramType as? ParameterizedType
                 ?: throw UnsupportedOperationException("Unsupported parameter type $this")
 
         val elementType = parameterizedType.actualTypeArguments.single()
         if (elementType.isPrimitiveOrString()) {
-            return ValueCollectionSeed(elementType, classInfoCache)
+            return ValueListSeed(elementType, classInfoCache)
         }
-        return ObjectCollectionSeed(elementType, classInfoCache)
+        return ObjectListSeed(elementType, classInfoCache)
     }
-    if (isCollection) throw JKidException("Object of the type ${paramType.typeName} expected, not an array")
+    if (isList) throw JKidException("Object of the type ${paramType.typeName} expected, not an array")
     return ObjectSeed(paramClass.kotlin, classInfoCache)
 }
 
@@ -82,15 +82,17 @@ class ObjectSeed<out T: Any>(
         valueArguments[param] = classInfo.deserializeConstructorArgument(param, value)
     }
 
-    override fun createCompositeProperty(propertyName: String, isCollection: Boolean): Seed {
+    override fun createCompositeProperty(propertyName: String, isList: Boolean): Seed {
         val param = classInfo.getConstructorParameter(propertyName)
-        return createSeedForType(param.type.javaType, isCollection).apply { seedArguments[param] = this }
+        val seed = createSeedForType(
+                param.type.javaType, isList)
+        return seed.apply { seedArguments[param] = this }
     }
 
     override fun spawn(): T = classInfo.createInstance(arguments)
 }
 
-class ObjectCollectionSeed(
+class ObjectListSeed(
         val elementType: Type,
         override val classInfoCache: ClassInfoCache
 ) : Seed {
@@ -100,13 +102,13 @@ class ObjectCollectionSeed(
         throw JKidException("Found primitive value in collection of object types")
     }
 
-    override fun createCompositeProperty(propertyName: String, isCollection: Boolean) =
-            createSeedForType(elementType, isCollection).apply { elements.add(this) }
+    override fun createCompositeProperty(propertyName: String, isList: Boolean) =
+            createSeedForType(elementType, isList).apply { elements.add(this) }
 
-    override fun spawn(): Collection<*> = elements.map { it.spawn() }
+    override fun spawn(): List<*> = elements.map { it.spawn() }
 }
 
-class ValueCollectionSeed(
+class ValueListSeed(
         elementType: Type,
         override val classInfoCache: ClassInfoCache
 ) : Seed {
@@ -117,7 +119,7 @@ class ValueCollectionSeed(
         elements.add(serializerForType.fromJsonValue(value))
     }
 
-    override fun createCompositeProperty(propertyName: String, isCollection: Boolean): Seed {
+    override fun createCompositeProperty(propertyName: String, isList: Boolean): Seed {
         throw JKidException("Found object value in collection of primitive types")
     }
 
