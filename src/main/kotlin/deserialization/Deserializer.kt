@@ -1,8 +1,6 @@
 package ru.yole.jkid.deserialization
 
-import ru.yole.jkid.asJavaClass
-import ru.yole.jkid.isPrimitiveOrString
-import ru.yole.jkid.serializerForBasicType
+import ru.yole.jkid.*
 import java.io.Reader
 import java.io.StringReader
 import java.lang.reflect.ParameterizedType
@@ -84,8 +82,9 @@ class ObjectSeed<out T: Any>(
 
     override fun createCompositeProperty(propertyName: String, isList: Boolean): Seed {
         val param = classInfo.getConstructorParameter(propertyName)
+        val deserializeAs = classInfo.getDeserializeClass(propertyName)
         val seed = createSeedForType(
-                param.type.javaType, isList)
+                deserializeAs ?: param.type.javaType, isList)
         return seed.apply { seedArguments[param] = this }
     }
 
