@@ -9,15 +9,15 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.jvm.javaType
 
-inline fun <reified T: Any> deserialize(json: String): T {
+inline fun <reified T : Any> deserialize(json: String): T {
     return deserialize(StringReader(json))
 }
 
-inline fun <reified T: Any> deserialize(json: Reader): T {
+inline fun <reified T : Any> deserialize(json: Reader): T {
     return deserialize(json, T::class)
 }
 
-fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>): T {
+fun <T : Any> deserialize(json: Reader, targetClass: KClass<T>): T {
     val seed = ObjectSeed(targetClass, ClassInfoCache())
     Parser(json, seed).parse()
     return seed.spawn()
@@ -31,7 +31,7 @@ interface JsonObject {
     fun createArray(propertyName: String): JsonObject
 }
 
-interface Seed: JsonObject {
+interface Seed : JsonObject {
     val classInfoCache: ClassInfoCache
 
     fun createCompositeProperty(propertyName: String, isList: Boolean): JsonObject
@@ -61,8 +61,7 @@ fun Seed.createSeedForType(paramType: Type, isList: Boolean): Seed {
     return ObjectSeed(paramClass.kotlin, classInfoCache)
 }
 
-
-class ObjectSeed<out T: Any>(
+class ObjectSeed<out T : Any>(
         targetClass: KClass<T>,
         override val classInfoCache: ClassInfoCache
 ) : Seed {
