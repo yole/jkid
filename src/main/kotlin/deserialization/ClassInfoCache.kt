@@ -1,10 +1,7 @@
 package ru.yole.jkid.deserialization
 
-import ru.yole.jkid.JsonName
-import ru.yole.jkid.ValueSerializer
-import ru.yole.jkid.findAnnotation
+import ru.yole.jkid.*
 import ru.yole.jkid.serialization.getSerializer
-import ru.yole.jkid.serializerForType
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.declaredMemberProperties
@@ -26,6 +23,7 @@ class ClassInfo<T : Any>(cls: KClass<T>) {
 
     private val jsonNameToParamMap = hashMapOf<String, KParameter>()
     private val paramToSerializerMap = hashMapOf<KParameter, ValueSerializer<out Any?>>()
+    private val jsonNameToDeserializeClassMap = hashMapOf<String, Class<out Any>?>()
 
     init {
         constructor.parameters.forEach { cacheDataForParameter(cls, it) }
@@ -39,6 +37,9 @@ class ClassInfo<T : Any>(cls: KClass<T>) {
         val name = property.findAnnotation<JsonName>()?.name ?: paramName
         jsonNameToParamMap[name] = param
 
+        val deserializeClass = property.findAnnotation<JsonDeserialize>()?.targetClass?.java
+        jsonNameToDeserializeClassMap[name] = deserializeClass
+
         val valueSerializer = property.getSerializer()
                 ?: serializerForType(param.type.javaType)
                 ?: return
@@ -47,6 +48,8 @@ class ClassInfo<T : Any>(cls: KClass<T>) {
 
     fun getConstructorParameter(propertyName: String): KParameter = jsonNameToParamMap[propertyName]
             ?: throw JKidException("Constructor parameter $propertyName is not found for class $className")
+
+    fun getDeserializeClass(propertyName: String) = jsonNameToDeserializeClassMap[propertyName]
 
     fun deserializeConstructorArgument(param: KParameter, value: Any?): Any? {
         val serializer = paramToSerializerMap[param]

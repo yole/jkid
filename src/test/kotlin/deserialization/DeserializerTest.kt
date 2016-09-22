@@ -1,10 +1,7 @@
 package ru.yole.jkid.deserialization
 
 import org.junit.Test
-import ru.yole.jkid.JsonExclude
-import ru.yole.jkid.JsonName
-import ru.yole.jkid.JsonSerializer
-import ru.yole.jkid.ValueSerializer
+import ru.yole.jkid.*
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -74,6 +71,11 @@ class DeserializerTest {
     @Test fun testTimestampSerializer() {
         val result = deserialize<SingleDateProp>("""{"x": 2000}""")
         assertEquals(2000, result.x.time)
+    }
+
+    @Test fun testJsonDeserialize() {
+        val result = deserialize<ValueHolder>("""{"value": {"name": "Foo"}}""")
+        assertEquals("Foo", result.value.name)
     }
 
     @Test fun testPropertyTypeMismatch() {
@@ -152,3 +154,11 @@ object TimestampSerializer : ValueSerializer<Date> {
 }
 
 data class SingleDateProp(@JsonSerializer(TimestampSerializer::class) val x: Date)
+
+interface ValueIntf {
+    val name: String
+}
+
+data class ValueImpl(override val name: String) : ValueIntf
+
+data class ValueHolder(@JsonDeserialize(ValueImpl::class) val value: ValueIntf)
