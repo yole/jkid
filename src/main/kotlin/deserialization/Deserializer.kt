@@ -34,13 +34,13 @@ interface JsonObject {
 interface Seed: JsonObject {
     val classInfoCache: ClassInfoCache
 
+    fun spawn(): Any?
+
     fun createCompositeProperty(propertyName: String, isList: Boolean): JsonObject
 
     override fun createObject(propertyName: String) = createCompositeProperty(propertyName, false)
 
     override fun createArray(propertyName: String) = createCompositeProperty(propertyName, true)
-
-    fun spawn(): Any?
 }
 
 fun Seed.createSeedForType(paramType: Type, isList: Boolean): Seed {
