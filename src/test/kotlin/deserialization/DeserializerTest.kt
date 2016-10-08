@@ -144,7 +144,7 @@ class NumberSerializer: ValueSerializer<Int> {
     }
 }
 
-data class SingleCustomSerializedProp(@JsonSerializer(NumberSerializer::class) val x: Int)
+data class SingleCustomSerializedProp(@CustomSerializer(NumberSerializer::class) val x: Int)
 
 object TimestampSerializer : ValueSerializer<Date> {
     override fun toJsonValue(value: Date): Any? = value.time
@@ -153,7 +153,7 @@ object TimestampSerializer : ValueSerializer<Date> {
             = Date((jsonValue as Number).toLong())
 }
 
-data class SingleDateProp(@JsonSerializer(TimestampSerializer::class) val x: Date)
+data class SingleDateProp(@CustomSerializer(TimestampSerializer::class) val x: Date)
 
 interface ValueIntf {
     val name: String
@@ -161,4 +161,4 @@ interface ValueIntf {
 
 data class ValueImpl(override val name: String) : ValueIntf
 
-data class ValueHolder(@JsonDeserialize(ValueImpl::class) val value: ValueIntf)
+data class ValueHolder(@DeserializeInterface(ValueImpl::class) val value: ValueIntf)

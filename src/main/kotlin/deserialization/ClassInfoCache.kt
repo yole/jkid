@@ -37,7 +37,7 @@ class ClassInfo<T : Any>(cls: KClass<T>) {
         val name = property.findAnnotation<JsonName>()?.name ?: paramName
         jsonNameToParamMap[name] = param
 
-        val deserializeClass = property.findAnnotation<JsonDeserialize>()?.targetClass?.java
+        val deserializeClass = property.findAnnotation<DeserializeInterface>()?.targetClass?.java
         jsonNameToDeserializeClassMap[name] = deserializeClass
 
         val valueSerializer = property.getSerializer()

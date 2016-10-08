@@ -1,7 +1,7 @@
 package ru.yole.jkid.examples.customSerializerTest
 
 import org.junit.Test
-import ru.yole.jkid.JsonSerializer
+import ru.yole.jkid.CustomSerializer
 import ru.yole.jkid.ValueSerializer
 import ru.yole.jkid.examples.jsonSerializerTest.testJsonSerializer
 import java.text.SimpleDateFormat
@@ -19,7 +19,7 @@ object DateSerializer : ValueSerializer<Date> {
 
 data class Person(
         val name: String,
-        @JsonSerializer(DateSerializer::class) val birthDate: Date
+        @CustomSerializer(DateSerializer::class) val birthDate: Date
 )
 
 class DateSerializerTest {
