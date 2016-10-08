@@ -14,7 +14,7 @@ interface ValueSerializer<T> {
 }
 
 @Target(AnnotationTarget.PROPERTY)
-annotation class JsonSerializer(val serializerClass: KClass<out ValueSerializer<*>>)
+annotation class JsonDeserialize(val targetClass: KClass<out Any>)
 
 @Target(AnnotationTarget.PROPERTY)
-annotation class JsonDeserialize(val targetClass: KClass<out Any>)
+annotation class JsonSerializer(val serializerClass: KClass<out ValueSerializer<*>>)
