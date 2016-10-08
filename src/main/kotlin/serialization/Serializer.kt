@@ -40,8 +40,8 @@ private fun StringBuilder.serializeProperty(
 }
 
 fun KProperty<*>.getSerializer(): ValueSerializer<Any?>? {
-    val jsonSerializerAnn = findAnnotation<CustomSerializer>() ?: return null
-    val serializerClass = jsonSerializerAnn.serializerClass
+    val customSerializerAnn = findAnnotation<CustomSerializer>() ?: return null
+    val serializerClass = customSerializerAnn.serializerClass
 
     val valueSerializer = serializerClass.objectInstance
             ?: serializerClass.createInstance()
