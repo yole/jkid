@@ -109,7 +109,7 @@ class Lexer(reader: Reader) {
         } while (c != null && c.isWhitespace())
         if (c == null) return null
 
-        return tokenMap[c.toChar()]?.invoke(c)
+        return tokenMap[c]?.invoke(c)
                 ?: throw MalformedJSONException("Unexpected token $c")
     }
 
@@ -146,7 +146,7 @@ class Lexer(reader: Reader) {
         while (true) {
             val c = charReader.peekNext()
             if (c == null || c in valueEndChars) break
-            buffer.append(charReader.readNext())
+            buffer.append(charReader.readNext()!!)
         }
         val value = buffer.toString()
         return if (value.contains(".")) Token.DoubleValue(value.toDouble()) else Token.LongValue(value.toLong())
