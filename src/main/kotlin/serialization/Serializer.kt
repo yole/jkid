@@ -30,8 +30,9 @@ private fun StringBuilder.serializeObject(obj: Any) {
 private fun StringBuilder.serializeProperty(
         prop: KProperty1<Any, *>, obj: Any
 ) {
-    val name = prop.findAnnotation<JsonName>()?.name ?: prop.name
-    serializeString(name)
+    val jsonNameAnn = prop.findAnnotation<JsonName>()
+    val propName = jsonNameAnn?.name ?: prop.name
+    serializeString(propName)
     append(": ")
 
     val value = prop.get(obj)
