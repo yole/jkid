@@ -4,9 +4,9 @@ import ru.yole.jkid.*
 import ru.yole.jkid.serialization.getSerializer
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
-import kotlin.reflect.declaredMemberProperties
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaType
-import kotlin.reflect.primaryConstructor
 
 class ClassInfoCache {
     private val cacheData = mutableMapOf<KClass<*>, ClassInfo<*>>()
