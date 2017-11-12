@@ -3,7 +3,7 @@ package ru.yole.jkid.serialization
 import ru.yole.jkid.*
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
-import kotlin.reflect.memberProperties
+import kotlin.reflect.full.memberProperties
 
 fun serialize(obj: Any): String = buildString { serializeObject(obj) }
 
