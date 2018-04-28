@@ -1,6 +1,5 @@
 package ru.yole.jkid.exercise
 
-import org.junit.Ignore
 import org.junit.Test
 import ru.yole.jkid.DateFormat
 import ru.yole.jkid.deserialization.deserialize
