@@ -13,7 +13,7 @@ class Parser(reader: Reader, val rootObject: JsonObject) {
         }
     }
 
-    private fun parseObjectBody(JsonObject: JsonObject) {
+    private fun parseObjectBody(jsonObject: JsonObject) {
         parseCommaSeparated(Token.RBRACE) { token ->
             if (token !is Token.StringValue) {
                 throw MalformedJSONException("Unexpected token $token")
@@ -21,7 +21,7 @@ class Parser(reader: Reader, val rootObject: JsonObject) {
 
             val propName = token.value
             expect(Token.COLON)
-            parsePropertyValue(JsonObject, propName, nextToken())
+            parsePropertyValue(jsonObject, propName, nextToken())
         }
     }
 
